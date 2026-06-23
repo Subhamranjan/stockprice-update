@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { getQuote } from "./actions";
 
-const STORAGE_KEY = "stock-watchlist";
+// const STORAGE_KEY = "stock-watchlist";
 const REFRESH_INTERVAL = 300000;
 
 // ── Exchanges / markets ─────────────────────────────────────────────────────
@@ -514,8 +514,6 @@ function useResponsiveColumns(desktopColumns = 4) {
     return columns;
 }
 
-const CLOCKS_STORAGE_KEY = "stock-dashboard-visible-clocks";
-
 export default function Dashboard() {
     const [stocks, setStocks] = useState([]);
     const [search, setSearch] = useState("");
@@ -523,49 +521,55 @@ export default function Dashboard() {
     const [loaded, setLoaded] = useState(false);
     const [showCommodities, setShowCommodities] = useState(false);
     const [visibleClocks, setVisibleClocks] = useState(REFERENCE_CLOCKS.map(c => c.label));
-    const [layout, setLayout] = useState("masonry"); // "masonry" = compact dense packing (default), "wide" = one-size flex layout
+    const [layout, setLayout] = useState("masonry");
     const columns = useResponsiveColumns(4);
 
+    // ── Load watchlist from DB on mount ──────────────────────────────────────
     useEffect(() => {
-        try {
-            const saved = localStorage.getItem(CLOCKS_STORAGE_KEY);
-            if (saved) setVisibleClocks(JSON.parse(saved));
-        } catch { /* ignore */ }
+        fetch("/api/watchlist")
+            .then(r => r.json())
+            .then(data => {
+                setStocks(Array.isArray(data) ? data : []);
+                setLoaded(true);
+            })
+            .catch(() => setLoaded(true));
     }, []);
 
+    // Load visible clocks from DB on mount
     useEffect(() => {
-        if (loaded) localStorage.setItem(CLOCKS_STORAGE_KEY, JSON.stringify(visibleClocks));
-    }, [visibleClocks, loaded]);
+        fetch("/api/clocks")
+            .then(r => r.json())
+            .then(data => {
+                if (Array.isArray(data)) {
+                    const visible = data.filter(c => c.visible).map(c => c.label);
+                    setVisibleClocks(visible);
+                }
+            })
+            .catch(() => { });
+    }, []);
 
-    const toggleClock = (label) => {
+    // Toggle clock visibility — update DB
+    const toggleClock = async (label) => {
+        const isVisible = visibleClocks.includes(label);
+        // Optimistic update
         setVisibleClocks(prev =>
-            prev.includes(label) ? prev.filter(l => l !== label) : [...prev, label]
+            isVisible ? prev.filter(l => l !== label) : [...prev, label]
         );
+        // Persist to DB
+        await fetch("/api/clocks", {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ label, visible: !isVisible }),
+        });
     };
 
-    useEffect(() => {
-        try {
-            const saved = localStorage.getItem(STORAGE_KEY);
-            const parsed = saved ? JSON.parse(saved) : null;
-            setStocks(parsed
-                ? parsed.map(s => ({ qty: 1, buyPrice: 0, side: "buy", mode: "trade", market: s.exchange === "BO" ? "BSE" : (s.market || "NSE"), ...s }))
-                : [{ symbol: "RELIANCE", market: "NSE", target: 3100, stopLoss: 2850, entryDate: "", notes: "", qty: 1, buyPrice: 0, side: "buy", mode: "trade" }]
-            );
-        } catch {
-            setStocks([{ symbol: "RELIANCE", market: "NSE", target: 3100, stopLoss: 2850, entryDate: "", notes: "", qty: 1, buyPrice: 0, side: "buy", mode: "trade" }]);
-        }
-        setLoaded(true);
-    }, []);
-
-    useEffect(() => {
-        if (loaded) localStorage.setItem(STORAGE_KEY, JSON.stringify(stocks));
-    }, [stocks, loaded]);
-
-    const addStock = (overrideSymbol, overrideMarket) => {
+    // ── Add stock → POST to DB ───────────────────────────────────────────────
+    const addStock = async (overrideSymbol, overrideMarket) => {
         const sym = typeof overrideSymbol === "string" ? overrideSymbol : search;
         const mkt = overrideMarket ?? selectedMarket;
         if (!sym) return;
-        setStocks([...stocks, {
+
+        const newStock = {
             symbol: overrideSymbol ? sym : sym.toUpperCase(),
             market: mkt,
             target: 0,
@@ -576,18 +580,63 @@ export default function Dashboard() {
             buyPrice: 0,
             side: "buy",
             mode: mkt === "COMMODITY" ? "watch" : "trade",
-        }]);
+        };
+
+        const res = await fetch("/api/watchlist", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(newStock),
+        });
+        const saved = await res.json();
+        setStocks(prev => [...prev, saved]);
         setSearch("");
         setShowCommodities(false);
     };
 
+    // ── Update field → PUT to DB (debounced 600ms) ───────────────────────────
+    const updateTimers = useRef({});
+
     const update = (idx, field, value) => {
-        const copy = [...stocks];
-        copy[idx][field] = ["target", "stopLoss", "qty", "buyPrice"].includes(field) ? Number(value) : value;
-        setStocks(copy);
+        // Optimistic update in UI immediately
+        setStocks(prev => {
+            const copy = [...prev];
+            copy[idx] = {
+                ...copy[idx],
+                [field]: ["target", "stopLoss", "qty", "buyPrice"].includes(field) ? Number(value) : value,
+            };
+            return copy;
+        });
+
+        // Debounce the DB write (avoids a PUT on every keystroke)
+        clearTimeout(updateTimers.current[idx]);
+        updateTimers.current[idx] = setTimeout(() => {
+            setStocks(prev => {
+                const stock = prev[idx];
+                if (!stock?.id) return prev;
+                fetch(`/api/watchlist/${stock.id}`, {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(stock),
+                }).catch(console.error);
+                return prev;
+            });
+        }, 600);
     };
 
-    if (!loaded) return null;
+    // ── Remove stock → DELETE from DB ────────────────────────────────────────
+    const removeStock = async (idx) => {
+        const stock = stocks[idx];
+        setStocks(prev => prev.filter((_, i) => i !== idx)); // optimistic
+        if (stock?.id) {
+            await fetch(`/api/watchlist/${stock.id}`, { method: "DELETE" });
+        }
+    };
+
+    if (!loaded) return (
+        <div className="flex items-center justify-center h-40 text-sm text-gray-400">
+            Loading watchlist...
+        </div>
+    );
 
     return (
         <div className="w-full px-3 sm:px-4 md:px-6 py-4 md:py-6">
@@ -643,7 +692,7 @@ export default function Dashboard() {
                 </div>
             )}
 
-            {/* Reference market clocks — informational only, not tied to any stock */}
+            {/* Reference clocks */}
             {visibleClocks.length > 0 && (
                 <div className="mb-4 flex flex-wrap gap-2">
                     {REFERENCE_CLOCKS.filter(clock => visibleClocks.includes(clock.label)).map((clock) => (
@@ -655,30 +704,16 @@ export default function Dashboard() {
             {layout === "wide" ? (
                 <div className="flex flex-wrap gap-4">
                     {stocks.map((s, idx) => (
-                        <div key={`${s.symbol}-${s.market}-${idx}`} className="w-80">
-                            <StockCard
-                                {...s}
-                                onRemove={() => setStocks(stocks.filter((_, i) => i !== idx))}
-                                onUpdate={(field, val) => update(idx, field, val)}
-                            />
+                        <div key={s.id ?? idx} className="w-80">
+                            <StockCard {...s} onRemove={() => removeStock(idx)} onUpdate={(field, val) => update(idx, field, val)} />
                         </div>
                     ))}
                 </div>
             ) : (
-                // True masonry via CSS multi-column: each card breaks cleanly, flows
-                // top-to-bottom-then-next-column, so cards of any height pack tightly
-                // without leftover gaps — unlike CSS grid's row-span trick.
                 <div className="gap-4" style={{ columnCount: columns, columnGap: "1rem" }}>
                     {stocks.map((s, idx) => (
-                        <div
-                            key={`${s.symbol}-${s.market}-${idx}`}
-                            className="mb-4 break-inside-avoid"
-                        >
-                            <StockCard
-                                {...s}
-                                onRemove={() => setStocks(stocks.filter((_, i) => i !== idx))}
-                                onUpdate={(field, val) => update(idx, field, val)}
-                            />
+                        <div key={s.id ?? idx} className="mb-4 break-inside-avoid">
+                            <StockCard {...s} onRemove={() => removeStock(idx)} onUpdate={(field, val) => update(idx, field, val)} />
                         </div>
                     ))}
                 </div>
