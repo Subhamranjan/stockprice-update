@@ -32,32 +32,6 @@ const COMMODITY_PRESETS = [
     { label: "Coffee", value: "KC=F" },
 ];
 
-const INDEX_PRESETS = [
-    // India
-    { label: "Nifty 50", value: "^NSEI", market: "NSE" },
-    { label: "Sensex", value: "^BSESN", market: "BSE" },
-    { label: "Nifty Bank", value: "^NSEBANK", market: "NSE" },
-    { label: "Nifty IT", value: "^CNXIT", market: "NSE" },
-    { label: "Nifty Midcap", value: "^NSEMDCP50", market: "NSE" },
-    // USA
-    { label: "S&P 500", value: "^GSPC", market: "NASDAQ" },
-    { label: "Nasdaq 100", value: "^NDX", market: "NASDAQ" },
-    { label: "Dow Jones", value: "^DJI", market: "NYSE" },
-    { label: "Russell 2000", value: "^RUT", market: "NYSE" },
-    { label: "VIX", value: "^VIX", market: "NASDAQ" },
-    // Europe
-    { label: "FTSE 100", value: "^FTSE", market: "LSE" },
-    { label: "DAX", value: "^GDAXI", market: "NSE" },
-    { label: "CAC 40", value: "^FCHI", market: "NSE" },
-    { label: "Euro Stoxx 50", value: "^STOXX50E", market: "NSE" },
-    // Asia
-    { label: "Nikkei 225", value: "^N225", market: "TSE" },
-    { label: "Hang Seng", value: "^HSI", market: "HKEX" },
-    { label: "Shanghai", value: "000001.SS", market: "SSE" },
-    { label: "Kospi", value: "^KS11", market: "NSE" },
-    { label: "ASX 200", value: "^AXJO", market: "NSE" },
-];
-
 const REFERENCE_CLOCKS = [
     { label: "NSE", tz: "Asia/Kolkata", open: [9, 30], close: [15, 0], alwaysOpen: false },
     { label: "NASDAQ", tz: "America/New_York", open: [9, 30], close: [16, 0], alwaysOpen: false },
@@ -511,6 +485,23 @@ function useResponsiveColumns(desktopColumns = 4) {
     return columns;
 }
 
+// ── Theme hook ─────────────────────────────────────────────
+function useTheme() {
+    const [dark, setDark] = useState(true); // dark default
+
+    useEffect(() => {
+        const saved = localStorage.getItem("theme");
+        setDark(saved ? saved === "dark" : true);
+    }, []);
+
+    useEffect(() => {
+        localStorage.setItem("theme", dark ? "dark" : "light");
+        document.documentElement.classList.toggle("dark", dark);
+    }, [dark]);
+
+    return [dark, setDark];
+}
+
 export default function Dashboard() {
     const [stocks, setStocks] = useState([]);
     const [search, setSearch] = useState("");
@@ -520,7 +511,7 @@ export default function Dashboard() {
     const [visibleClocks, setVisibleClocks] = useState(REFERENCE_CLOCKS.map(c => c.label));
     const [layout, setLayout] = useState("masonry");
     const columns = useResponsiveColumns(4);
-    const [showIndices, setShowIndices] = useState(false);
+    const [dark, setDark] = useTheme();
 
     // ── Load watchlist from DB on mount ──────────────────────────────────────
     useEffect(() => {
@@ -666,7 +657,6 @@ export default function Dashboard() {
                 >
                     Add
                 </button>
-
                 <button
                     onClick={() => setShowCommodities(v => !v)}
                     className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-700 hover:bg-amber-100"
@@ -674,12 +664,18 @@ export default function Dashboard() {
                     Commodities
                 </button>
 
+                {/* Dark/Light toggle */}
                 <button
-                    onClick={() => setShowIndices(v => !v)}
-                    className="rounded-md border border-blue-300 bg-blue-50 px-3 py-2 text-sm font-medium text-blue-700 hover:bg-blue-100"
+                    onClick={() => setDark(v => !v)}
+                    className={`rounded-md border px-3 py-2 text-sm font-medium transition-colors ${dark
+                        ? "border-yellow-500 bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500/20"
+                        : "border-indigo-500 bg-indigo-500/10 text-indigo-600 hover:bg-indigo-500/20"
+                        }`}
+                    title={dark ? "Switch to light mode" : "Switch to dark mode"}
                 >
-                    Indices
+                    {dark ? "☀️ Light" : "🌙 Dark"}
                 </button>
+
             </div>
 
             {/* Commodity quick-add panel */}
@@ -694,52 +690,6 @@ export default function Dashboard() {
                             {c.label}
                         </button>
                     ))}
-                </div>
-            )}
-
-            {/* Indices quick-add panel */}
-            {showIndices && (
-                <div className="mb-4 rounded-lg border border-gray-200 bg-gray-50 p-3">
-                    {/* India */}
-                    <p className="text-[10px] font-semibold text-gray-400 uppercase mb-2">India</p>
-                    <div className="flex flex-wrap gap-2 mb-3">
-                        {INDEX_PRESETS.filter(i => ["^NSEI", "^BSESN", "^NSEBANK", "^CNXIT", "^NSEMDCP50"].includes(i.value)).map((idx) => (
-                            <button key={idx.value} onClick={() => addStock(idx.value, idx.market)}
-                                className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-blue-50 hover:border-blue-300">
-                                {idx.label}
-                            </button>
-                        ))}
-                    </div>
-                    {/* USA */}
-                    <p className="text-[10px] font-semibold text-gray-400 uppercase mb-2">USA</p>
-                    <div className="flex flex-wrap gap-2 mb-3">
-                        {INDEX_PRESETS.filter(i => ["^GSPC", "^NDX", "^DJI", "^RUT", "^VIX"].includes(i.value)).map((idx) => (
-                            <button key={idx.value} onClick={() => addStock(idx.value, idx.market)}
-                                className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-blue-50 hover:border-blue-300">
-                                {idx.label}
-                            </button>
-                        ))}
-                    </div>
-                    {/* Europe */}
-                    <p className="text-[10px] font-semibold text-gray-400 uppercase mb-2">Europe</p>
-                    <div className="flex flex-wrap gap-2 mb-3">
-                        {INDEX_PRESETS.filter(i => ["^FTSE", "^GDAXI", "^FCHI", "^STOXX50E"].includes(i.value)).map((idx) => (
-                            <button key={idx.value} onClick={() => addStock(idx.value, idx.market)}
-                                className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-blue-50 hover:border-blue-300">
-                                {idx.label}
-                            </button>
-                        ))}
-                    </div>
-                    {/* Asia */}
-                    <p className="text-[10px] font-semibold text-gray-400 uppercase mb-2">Asia</p>
-                    <div className="flex flex-wrap gap-2">
-                        {INDEX_PRESETS.filter(i => ["^N225", "^HSI", "000001.SS", "^KS11", "^AXJO"].includes(i.value)).map((idx) => (
-                            <button key={idx.value} onClick={() => addStock(idx.value, idx.market)}
-                                className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-blue-50 hover:border-blue-300">
-                                {idx.label}
-                            </button>
-                        ))}
-                    </div>
                 </div>
             )}
 
