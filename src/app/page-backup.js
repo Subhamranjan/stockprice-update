@@ -522,11 +522,11 @@ export default function Dashboard() {
     const [search, setSearch] = useState("");
     const [selectedMarket, setSelectedMarket] = useState("NSE");
     const [loaded, setLoaded] = useState(false);
-    //    const [showCommodities, setShowCommodities] = useState(false);
+    const [commodityOpen, setCommodityOpen] = useState(false);
     const [visibleClocks, setVisibleClocks] = useState(REFERENCE_CLOCKS.map(c => c.label));
     const [layout, setLayout] = useState("masonry");
     const columns = useResponsiveColumns(4);
-    //    const [showIndices, setShowIndices] = useState(false);
+    const [indicesOpen, setIndicesOpen] = useState(false);
 
     // ── Load watchlist from DB on mount ──────────────────────────────────────
     useEffect(() => {
@@ -676,81 +676,73 @@ export default function Dashboard() {
                     Add
                 </button>
 
-                <button
-                    onClick={() => setShowCommodities(v => !v)}
-                    className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-700 hover:bg-amber-100"
-                >
-                    Commodities
-                </button>
+                {/* ── Commodities dropdown ── */}
+                <div className="relative">
+                    <button
+                        onClick={() => { setCommodityOpen(v => !v); setIndicesOpen(false); }}
+                        className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-700 hover:bg-amber-100 flex items-center gap-1"
+                    >
+                        Commodities <span className="text-[10px]">{commodityOpen ? "▲" : "▼"}</span>
+                    </button>
+                    {commodityOpen && (
+                        <>
+                            <div className="fixed inset-0 z-10" onClick={() => setCommodityOpen(false)} />
+                            <div className="absolute left-0 z-20 mt-1 w-48 rounded-md border border-gray-200 bg-white shadow-lg py-1">
+                                {COMMODITY_PRESETS.map((c) => (
+                                    <button
+                                        key={c.value}
+                                        onClick={() => { addStock(c.value, "COMMODITY"); setCommodityOpen(false); }}
+                                        className="w-full text-left px-3 py-1.5 text-sm text-gray-700 hover:bg-amber-50 hover:text-amber-700"
+                                    >
+                                        {c.label}
+                                    </button>
+                                ))}
+                            </div>
+                        </>
+                    )}
+                </div>
 
-                <button
-                    onClick={() => setShowIndices(v => !v)}
-                    className="rounded-md border border-blue-300 bg-blue-50 px-3 py-2 text-sm font-medium text-blue-700 hover:bg-blue-100"
-                >
-                    Indices
-                </button>
+                {/* ── Indices dropdown ── */}
+                <div className="relative">
+                    <button
+                        onClick={() => { setIndicesOpen(v => !v); setCommodityOpen(false); }}
+                        className="rounded-md border border-blue-300 bg-blue-50 px-3 py-2 text-sm font-medium text-blue-700 hover:bg-blue-100 flex items-center gap-1"
+                    >
+                        Indices <span className="text-[10px]">{indicesOpen ? "▲" : "▼"}</span>
+                    </button>
+                    {indicesOpen && (
+                        <>
+                            <div className="fixed inset-0 z-10" onClick={() => setIndicesOpen(false)} />
+                            <div className="absolute left-0 z-20 mt-1 w-52 rounded-md border border-gray-200 bg-white shadow-lg py-1 max-h-80 overflow-y-auto">
+                                {[
+                                    { label: "India", values: ["^NSEI", "^BSESN", "^NSEBANK", "^CNXIT", "^NSEMDCP50"] },
+                                    { label: "USA", values: ["^GSPC", "^NDX", "^DJI", "^RUT", "^VIX"] },
+                                    { label: "Europe", values: ["^FTSE", "^GDAXI", "^FCHI", "^STOXX50E"] },
+                                    { label: "Asia", values: ["^N225", "^HSI", "000001.SS", "^KS11", "^AXJO"] },
+                                ].map((group) => (
+                                    <div key={group.label}>
+                                        <p className="px-3 pt-2 pb-1 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
+                                            {group.label}
+                                        </p>
+                                        {INDEX_PRESETS
+                                            .filter(i => group.values.includes(i.value))
+                                            .map((idx) => (
+                                                <button
+                                                    key={idx.value}
+                                                    onClick={() => { addStock(idx.value, idx.market); setIndicesOpen(false); }}
+                                                    className="w-full text-left px-3 py-1.5 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700"
+                                                >
+                                                    {idx.label}
+                                                </button>
+                                            ))
+                                        }
+                                    </div>
+                                ))}
+                            </div>
+                        </>
+                    )}
+                </div>
             </div>
-
-            {/* Commodity quick-add panel */}
-            {showCommodities && (
-                <div className="mb-4 flex flex-wrap gap-2 rounded-lg border border-gray-200 bg-gray-50 p-3">
-                    {COMMODITY_PRESETS.map((c) => (
-                        <button
-                            key={c.value}
-                            onClick={() => addStock(c.value, "COMMODITY")}
-                            className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-amber-50 hover:border-amber-300"
-                        >
-                            {c.label}
-                        </button>
-                    ))}
-                </div>
-            )}
-
-            {/* Indices quick-add panel */}
-            {showIndices && (
-                <div className="mb-4 rounded-lg border border-gray-200 bg-gray-50 p-3">
-                    {/* India */}
-                    <p className="text-[10px] font-semibold text-gray-400 uppercase mb-2">India</p>
-                    <div className="flex flex-wrap gap-2 mb-3">
-                        {INDEX_PRESETS.filter(i => ["^NSEI", "^BSESN", "^NSEBANK", "^CNXIT", "^NSEMDCP50"].includes(i.value)).map((idx) => (
-                            <button key={idx.value} onClick={() => addStock(idx.value, idx.market)}
-                                className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-blue-50 hover:border-blue-300">
-                                {idx.label}
-                            </button>
-                        ))}
-                    </div>
-                    {/* USA */}
-                    <p className="text-[10px] font-semibold text-gray-400 uppercase mb-2">USA</p>
-                    <div className="flex flex-wrap gap-2 mb-3">
-                        {INDEX_PRESETS.filter(i => ["^GSPC", "^NDX", "^DJI", "^RUT", "^VIX"].includes(i.value)).map((idx) => (
-                            <button key={idx.value} onClick={() => addStock(idx.value, idx.market)}
-                                className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-blue-50 hover:border-blue-300">
-                                {idx.label}
-                            </button>
-                        ))}
-                    </div>
-                    {/* Europe */}
-                    <p className="text-[10px] font-semibold text-gray-400 uppercase mb-2">Europe</p>
-                    <div className="flex flex-wrap gap-2 mb-3">
-                        {INDEX_PRESETS.filter(i => ["^FTSE", "^GDAXI", "^FCHI", "^STOXX50E"].includes(i.value)).map((idx) => (
-                            <button key={idx.value} onClick={() => addStock(idx.value, idx.market)}
-                                className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-blue-50 hover:border-blue-300">
-                                {idx.label}
-                            </button>
-                        ))}
-                    </div>
-                    {/* Asia */}
-                    <p className="text-[10px] font-semibold text-gray-400 uppercase mb-2">Asia</p>
-                    <div className="flex flex-wrap gap-2">
-                        {INDEX_PRESETS.filter(i => ["^N225", "^HSI", "000001.SS", "^KS11", "^AXJO"].includes(i.value)).map((idx) => (
-                            <button key={idx.value} onClick={() => addStock(idx.value, idx.market)}
-                                className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-blue-50 hover:border-blue-300">
-                                {idx.label}
-                            </button>
-                        ))}
-                    </div>
-                </div>
-            )}
 
             {/* Reference clocks */}
             {visibleClocks.length > 0 && (

@@ -687,7 +687,7 @@ export default function Dashboard() {
                     {commodityOpen && (
                         <>
                             <div className="fixed inset-0 z-10" onClick={() => setCommodityOpen(false)} />
-                            <div className="absolute left-0 z-20 mt-1 w-48 rounded-md border border-gray-200 bg-white shadow-lg py-1">
+                            <div className="absolute top-full left-0 z-20 mt-1 w-48 rounded-md border border-gray-200 bg-white shadow-lg py-1">
                                 {COMMODITY_PRESETS.map((c) => (
                                     <button
                                         key={c.value}
@@ -713,7 +713,7 @@ export default function Dashboard() {
                     {indicesOpen && (
                         <>
                             <div className="fixed inset-0 z-10" onClick={() => setIndicesOpen(false)} />
-                            <div className="absolute left-0 z-20 mt-1 w-52 rounded-md border border-gray-200 bg-white shadow-lg py-1 max-h-80 overflow-y-auto">
+                            <div className="absolute top-full left-0 z-20 mt-1 w-52 rounded-md border border-gray-200 bg-white shadow-lg py-1 max-h-80 overflow-y-auto">
                                 {[
                                     { label: "India", values: ["^NSEI", "^BSESN", "^NSEBANK", "^CNXIT", "^NSEMDCP50"] },
                                     { label: "USA", values: ["^GSPC", "^NDX", "^DJI", "^RUT", "^VIX"] },
