@@ -6,7 +6,7 @@ import { getQuote } from "./actions";
 const REFRESH_INTERVAL = 300000;
 
 const MARKETS = {
-    NSE: { suffix: ".NS", currency: "INR", symbol: "₹", label: "NSE", tz: "Asia/Kolkata", open: [9, 30], close: [15, 0] },
+    NSE: { suffix: ".NS", currency: "INR", symbol: "₹", label: "NSE", tz: "Asia/Kolkata", open: [9, 15], close: [15, 30] },
     BSE: { suffix: ".BO", currency: "INR", symbol: "₹", label: "BSE", tz: "Asia/Kolkata", open: [9, 15], close: [15, 30] },
     NASDAQ: { suffix: "", currency: "USD", symbol: "$", label: "NASDAQ", tz: "America/New_York", open: [9, 30], close: [16, 0] },
     NYSE: { suffix: "", currency: "USD", symbol: "$", label: "NYSE", tz: "America/New_York", open: [9, 30], close: [16, 0] },
@@ -15,6 +15,7 @@ const MARKETS = {
     HKEX: { suffix: ".HK", currency: "HKD", symbol: "HK$", label: "HKEX", tz: "Asia/Hong_Kong", open: [9, 30], close: [16, 0] },
     SSE: { suffix: ".SS", currency: "CNY", symbol: "¥", label: "Shanghai", tz: "Asia/Shanghai", open: [9, 30], close: [15, 0] },
     COMMODITY: { suffix: "", currency: "USD", symbol: "$", label: "Commodity", tz: "America/New_York", open: [18, 0], close: [17, 0] },
+    INDEX: { suffix: "", currency: "", symbol: "", label: "Index", tz: "Asia/Kolkata", open: [9, 0], close: [16, 0] },
 };
 
 const COMMODITY_PRESETS = [
@@ -34,28 +35,28 @@ const COMMODITY_PRESETS = [
 
 const INDEX_PRESETS = [
     // India
-    { label: "Nifty 50", value: "^NSEI", market: "NSE" },
-    { label: "Sensex", value: "^BSESN", market: "BSE" },
-    { label: "Nifty Bank", value: "^NSEBANK", market: "NSE" },
-    { label: "Nifty IT", value: "^CNXIT", market: "NSE" },
-    { label: "Nifty Midcap", value: "^NSEMDCP50", market: "NSE" },
+    { label: "Nifty 50", value: "^NSEI", market: "INDEX" },
+    { label: "Sensex", value: "^BSESN", market: "INDEX" },
+    { label: "Nifty Bank", value: "^NSEBANK", market: "INDEX" },
+    { label: "Nifty IT", value: "^CNXIT", market: "INDEX" },
+    { label: "Nifty Midcap", value: "^NSEMDCP50", market: "INDEX" },
     // USA
-    { label: "S&P 500", value: "^GSPC", market: "NASDAQ" },
-    { label: "Nasdaq 100", value: "^NDX", market: "NASDAQ" },
-    { label: "Dow Jones", value: "^DJI", market: "NYSE" },
-    { label: "Russell 2000", value: "^RUT", market: "NYSE" },
-    { label: "VIX", value: "^VIX", market: "NASDAQ" },
+    { label: "S&P 500", value: "^GSPC", market: "INDEX" },
+    { label: "Nasdaq 100", value: "^NDX", market: "INDEX" },
+    { label: "Dow Jones", value: "^DJI", market: "INDEX" },
+    { label: "Russell 2000", value: "^RUT", market: "INDEX" },
+    { label: "VIX", value: "^VIX", market: "INDEX" },
     // Europe
-    { label: "FTSE 100", value: "^FTSE", market: "LSE" },
-    { label: "DAX", value: "^GDAXI", market: "NSE" },
-    { label: "CAC 40", value: "^FCHI", market: "NSE" },
-    { label: "Euro Stoxx 50", value: "^STOXX50E", market: "NSE" },
+    { label: "FTSE 100", value: "^FTSE", market: "INDEX" },
+    { label: "DAX", value: "^GDAXI", market: "INDEX" },
+    { label: "CAC 40", value: "^FCHI", market: "INDEX" },
+    { label: "Euro Stoxx 50", value: "^STOXX50E", market: "INDEX" },
     // Asia
-    { label: "Nikkei 225", value: "^N225", market: "TSE" },
-    { label: "Hang Seng", value: "^HSI", market: "HKEX" },
-    { label: "Shanghai", value: "000001.SS", market: "SSE" },
-    { label: "Kospi", value: "^KS11", market: "NSE" },
-    { label: "ASX 200", value: "^AXJO", market: "NSE" },
+    { label: "Nikkei 225", value: "^N225", market: "INDEX" },
+    { label: "Hang Seng", value: "^HSI", market: "INDEX" },
+    { label: "Shanghai", value: "000001.SS", market: "INDEX" },
+    { label: "Kospi", value: "^KS11", market: "INDEX" },
+    { label: "ASX 200", value: "^AXJO", market: "INDEX" },
 ];
 
 const REFERENCE_CLOCKS = [
@@ -136,9 +137,10 @@ function calcRR(buyPrice, target, stopLoss, side = "buy") {
 function fmtMoney(value, market) {
     const m = MARKETS[market] || MARKETS.NSE;
     if (value === null || value === undefined || isNaN(value)) return "-";
-    // FX pairs typically shown with 4 decimals, equities with 2
     const decimals = market === "FX" ? 4 : 2;
     const num = value.toLocaleString("en-IN", { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+    // INDEX has no fixed symbol — just show the number
+    if (market === "INDEX") return num;
     return m.symbol ? `${m.symbol}${num}` : num;
 }
 
@@ -242,7 +244,9 @@ function StockCard({ symbol, market, target, stopLoss, entryDate, notes, qty, bu
     useEffect(() => {
         let active = true;
         const fetchPrice = async () => {
-            const ticker = market === "COMMODITY" ? symbol : `${symbol}${m.suffix}`;
+            const ticker = (market === "COMMODITY" || market === "INDEX")
+                ? symbol
+                : `${symbol}${m.suffix}`;
             const data = await getQuote(ticker);
             if (active) setQuote(data);
         };
@@ -297,7 +301,9 @@ function StockCard({ symbol, market, target, stopLoss, entryDate, notes, qty, bu
                     <h3 className="text-base font-semibold text-gray-900">
                         {market === "COMMODITY"
                             ? (COMMODITY_PRESETS.find(c => c.value === symbol)?.label ?? symbol)
-                            : symbol}
+                            : market === "INDEX"
+                                ? (INDEX_PRESETS.find(i => i.value === symbol)?.label ?? symbol)
+                                : symbol}
                     </h3>
                     <span className="text-[10px] text-gray-400 font-medium">{m.label}</span>
                 </div>
@@ -577,7 +583,7 @@ export default function Dashboard() {
             qty: 1,
             buyPrice: 0,
             side: "buy",
-            mode: mkt === "COMMODITY" ? "watch" : "trade",
+            mode: (mkt === "COMMODITY" || mkt === "INDEX") ? "watch" : "trade",
         };
 
         const res = await fetch("/api/watchlist", {
@@ -645,9 +651,12 @@ export default function Dashboard() {
                     onChange={(e) => setSelectedMarket(e.target.value)}
                     className="rounded-md border border-gray-300 px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
-                    {Object.entries(MARKETS).filter(([k]) => k !== "COMMODITY").map(([key, m]) => (
-                        <option key={key} value={key}>{m.label}</option>
-                    ))}
+                    {Object.entries(MARKETS)
+                        .filter(([k]) => k !== "COMMODITY" && k !== "INDEX")
+                        .map(([key, m]) => (
+                            <option key={key} value={key}>{m.label}</option>
+                        ))
+                    }
                 </select>
 
                 <MarketBadge clock={clockForMarket(selectedMarket)} />
