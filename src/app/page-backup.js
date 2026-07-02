@@ -6,7 +6,7 @@ import { getQuote } from "./actions";
 const REFRESH_INTERVAL = 300000;
 
 const MARKETS = {
-    NSE: { suffix: ".NS", currency: "INR", symbol: "₹", label: "NSE", tz: "Asia/Kolkata", open: [9, 30], close: [15, 0] },
+    NSE: { suffix: ".NS", currency: "INR", symbol: "₹", label: "NSE", tz: "Asia/Kolkata", open: [9, 15], close: [15, 30] },
     BSE: { suffix: ".BO", currency: "INR", symbol: "₹", label: "BSE", tz: "Asia/Kolkata", open: [9, 15], close: [15, 30] },
     NASDAQ: { suffix: "", currency: "USD", symbol: "$", label: "NASDAQ", tz: "America/New_York", open: [9, 30], close: [16, 0] },
     NYSE: { suffix: "", currency: "USD", symbol: "$", label: "NYSE", tz: "America/New_York", open: [9, 30], close: [16, 0] },
@@ -15,6 +15,7 @@ const MARKETS = {
     HKEX: { suffix: ".HK", currency: "HKD", symbol: "HK$", label: "HKEX", tz: "Asia/Hong_Kong", open: [9, 30], close: [16, 0] },
     SSE: { suffix: ".SS", currency: "CNY", symbol: "¥", label: "Shanghai", tz: "Asia/Shanghai", open: [9, 30], close: [15, 0] },
     COMMODITY: { suffix: "", currency: "USD", symbol: "$", label: "Commodity", tz: "America/New_York", open: [18, 0], close: [17, 0] },
+    INDEX: { suffix: "", currency: "", symbol: "", label: "Index", tz: "Asia/Kolkata", open: [9, 0], close: [16, 0] },
 };
 
 const COMMODITY_PRESETS = [
@@ -30,6 +31,32 @@ const COMMODITY_PRESETS = [
     { label: "Soybean", value: "ZS=F" },
     { label: "Cotton", value: "CT=F" },
     { label: "Coffee", value: "KC=F" },
+];
+
+const INDEX_PRESETS = [
+    // India
+    { label: "Nifty 50", value: "^NSEI", market: "INDEX" },
+    { label: "Sensex", value: "^BSESN", market: "INDEX" },
+    { label: "Nifty Bank", value: "^NSEBANK", market: "INDEX" },
+    { label: "Nifty IT", value: "^CNXIT", market: "INDEX" },
+    { label: "Nifty Midcap", value: "^NSEMDCP50", market: "INDEX" },
+    // USA
+    { label: "S&P 500", value: "^GSPC", market: "INDEX" },
+    { label: "Nasdaq 100", value: "^NDX", market: "INDEX" },
+    { label: "Dow Jones", value: "^DJI", market: "INDEX" },
+    { label: "Russell 2000", value: "^RUT", market: "INDEX" },
+    { label: "VIX", value: "^VIX", market: "INDEX" },
+    // Europe
+    { label: "FTSE 100", value: "^FTSE", market: "INDEX" },
+    { label: "DAX", value: "^GDAXI", market: "INDEX" },
+    { label: "CAC 40", value: "^FCHI", market: "INDEX" },
+    { label: "Euro Stoxx 50", value: "^STOXX50E", market: "INDEX" },
+    // Asia
+    { label: "Nikkei 225", value: "^N225", market: "INDEX" },
+    { label: "Hang Seng", value: "^HSI", market: "INDEX" },
+    { label: "Shanghai", value: "000001.SS", market: "INDEX" },
+    { label: "Kospi", value: "^KS11", market: "INDEX" },
+    { label: "ASX 200", value: "^AXJO", market: "INDEX" },
 ];
 
 const REFERENCE_CLOCKS = [
@@ -110,9 +137,10 @@ function calcRR(buyPrice, target, stopLoss, side = "buy") {
 function fmtMoney(value, market) {
     const m = MARKETS[market] || MARKETS.NSE;
     if (value === null || value === undefined || isNaN(value)) return "-";
-    // FX pairs typically shown with 4 decimals, equities with 2
     const decimals = market === "FX" ? 4 : 2;
     const num = value.toLocaleString("en-IN", { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+    // INDEX has no fixed symbol — just show the number
+    if (market === "INDEX") return num;
     return m.symbol ? `${m.symbol}${num}` : num;
 }
 
@@ -216,7 +244,9 @@ function StockCard({ symbol, market, target, stopLoss, entryDate, notes, qty, bu
     useEffect(() => {
         let active = true;
         const fetchPrice = async () => {
-            const ticker = market === "COMMODITY" ? symbol : `${symbol}${m.suffix}`;
+            const ticker = (market === "COMMODITY" || market === "INDEX")
+                ? symbol
+                : `${symbol}${m.suffix}`;
             const data = await getQuote(ticker);
             if (active) setQuote(data);
         };
@@ -271,7 +301,9 @@ function StockCard({ symbol, market, target, stopLoss, entryDate, notes, qty, bu
                     <h3 className="text-base font-semibold text-gray-900">
                         {market === "COMMODITY"
                             ? (COMMODITY_PRESETS.find(c => c.value === symbol)?.label ?? symbol)
-                            : symbol}
+                            : market === "INDEX"
+                                ? (INDEX_PRESETS.find(i => i.value === symbol)?.label ?? symbol)
+                                : symbol}
                     </h3>
                     <span className="text-[10px] text-gray-400 font-medium">{m.label}</span>
                 </div>
@@ -485,33 +517,16 @@ function useResponsiveColumns(desktopColumns = 4) {
     return columns;
 }
 
-// ── Theme hook ─────────────────────────────────────────────
-function useTheme() {
-    const [dark, setDark] = useState(true); // dark default
-
-    useEffect(() => {
-        const saved = localStorage.getItem("theme");
-        setDark(saved ? saved === "dark" : true);
-    }, []);
-
-    useEffect(() => {
-        localStorage.setItem("theme", dark ? "dark" : "light");
-        document.documentElement.classList.toggle("dark", dark);
-    }, [dark]);
-
-    return [dark, setDark];
-}
-
 export default function Dashboard() {
     const [stocks, setStocks] = useState([]);
     const [search, setSearch] = useState("");
     const [selectedMarket, setSelectedMarket] = useState("NSE");
     const [loaded, setLoaded] = useState(false);
-    const [showCommodities, setShowCommodities] = useState(false);
+    //    const [showCommodities, setShowCommodities] = useState(false);
     const [visibleClocks, setVisibleClocks] = useState(REFERENCE_CLOCKS.map(c => c.label));
     const [layout, setLayout] = useState("masonry");
     const columns = useResponsiveColumns(4);
-    const [dark, setDark] = useTheme();
+    //    const [showIndices, setShowIndices] = useState(false);
 
     // ── Load watchlist from DB on mount ──────────────────────────────────────
     useEffect(() => {
@@ -568,7 +583,7 @@ export default function Dashboard() {
             qty: 1,
             buyPrice: 0,
             side: "buy",
-            mode: mkt === "COMMODITY" ? "watch" : "trade",
+            mode: (mkt === "COMMODITY" || mkt === "INDEX") ? "watch" : "trade",
         };
 
         const res = await fetch("/api/watchlist", {
@@ -636,9 +651,12 @@ export default function Dashboard() {
                     onChange={(e) => setSelectedMarket(e.target.value)}
                     className="rounded-md border border-gray-300 px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
-                    {Object.entries(MARKETS).filter(([k]) => k !== "COMMODITY").map(([key, m]) => (
-                        <option key={key} value={key}>{m.label}</option>
-                    ))}
+                    {Object.entries(MARKETS)
+                        .filter(([k]) => k !== "COMMODITY" && k !== "INDEX")
+                        .map(([key, m]) => (
+                            <option key={key} value={key}>{m.label}</option>
+                        ))
+                    }
                 </select>
 
                 <MarketBadge clock={clockForMarket(selectedMarket)} />
@@ -657,6 +675,7 @@ export default function Dashboard() {
                 >
                     Add
                 </button>
+
                 <button
                     onClick={() => setShowCommodities(v => !v)}
                     className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-700 hover:bg-amber-100"
@@ -664,18 +683,12 @@ export default function Dashboard() {
                     Commodities
                 </button>
 
-                {/* Dark/Light toggle */}
                 <button
-                    onClick={() => setDark(v => !v)}
-                    className={`rounded-md border px-3 py-2 text-sm font-medium transition-colors ${dark
-                        ? "border-yellow-500 bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500/20"
-                        : "border-indigo-500 bg-indigo-500/10 text-indigo-600 hover:bg-indigo-500/20"
-                        }`}
-                    title={dark ? "Switch to light mode" : "Switch to dark mode"}
+                    onClick={() => setShowIndices(v => !v)}
+                    className="rounded-md border border-blue-300 bg-blue-50 px-3 py-2 text-sm font-medium text-blue-700 hover:bg-blue-100"
                 >
-                    {dark ? "☀️ Light" : "🌙 Dark"}
+                    Indices
                 </button>
-
             </div>
 
             {/* Commodity quick-add panel */}
@@ -690,6 +703,52 @@ export default function Dashboard() {
                             {c.label}
                         </button>
                     ))}
+                </div>
+            )}
+
+            {/* Indices quick-add panel */}
+            {showIndices && (
+                <div className="mb-4 rounded-lg border border-gray-200 bg-gray-50 p-3">
+                    {/* India */}
+                    <p className="text-[10px] font-semibold text-gray-400 uppercase mb-2">India</p>
+                    <div className="flex flex-wrap gap-2 mb-3">
+                        {INDEX_PRESETS.filter(i => ["^NSEI", "^BSESN", "^NSEBANK", "^CNXIT", "^NSEMDCP50"].includes(i.value)).map((idx) => (
+                            <button key={idx.value} onClick={() => addStock(idx.value, idx.market)}
+                                className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-blue-50 hover:border-blue-300">
+                                {idx.label}
+                            </button>
+                        ))}
+                    </div>
+                    {/* USA */}
+                    <p className="text-[10px] font-semibold text-gray-400 uppercase mb-2">USA</p>
+                    <div className="flex flex-wrap gap-2 mb-3">
+                        {INDEX_PRESETS.filter(i => ["^GSPC", "^NDX", "^DJI", "^RUT", "^VIX"].includes(i.value)).map((idx) => (
+                            <button key={idx.value} onClick={() => addStock(idx.value, idx.market)}
+                                className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-blue-50 hover:border-blue-300">
+                                {idx.label}
+                            </button>
+                        ))}
+                    </div>
+                    {/* Europe */}
+                    <p className="text-[10px] font-semibold text-gray-400 uppercase mb-2">Europe</p>
+                    <div className="flex flex-wrap gap-2 mb-3">
+                        {INDEX_PRESETS.filter(i => ["^FTSE", "^GDAXI", "^FCHI", "^STOXX50E"].includes(i.value)).map((idx) => (
+                            <button key={idx.value} onClick={() => addStock(idx.value, idx.market)}
+                                className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-blue-50 hover:border-blue-300">
+                                {idx.label}
+                            </button>
+                        ))}
+                    </div>
+                    {/* Asia */}
+                    <p className="text-[10px] font-semibold text-gray-400 uppercase mb-2">Asia</p>
+                    <div className="flex flex-wrap gap-2">
+                        {INDEX_PRESETS.filter(i => ["^N225", "^HSI", "000001.SS", "^KS11", "^AXJO"].includes(i.value)).map((idx) => (
+                            <button key={idx.value} onClick={() => addStock(idx.value, idx.market)}
+                                className="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-blue-50 hover:border-blue-300">
+                                {idx.label}
+                            </button>
+                        ))}
+                    </div>
                 </div>
             )}
 
