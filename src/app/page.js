@@ -325,7 +325,7 @@ function ClockSelector({ visible, onToggle }) {
 
 // ── StockCard ─────────────────────────────────────────────────────────────────
 
-function StockCard({ symbol, market, target, stopLoss, entryDate, notes, qty, buyPrice, side, mode, onRemove, onUpdate, isDragging }) {
+function StockCard({ symbol, market, target, stopLoss, entryDate, notes, qty, buyPrice, side, mode, onRemove, onUpdate, isDragging, onDragStart }) {
     const [quote, setQuote] = useState(null);
     const [showNotes, setShowNotes] = useState(false);
     const m = MARKETS[market] || MARKETS.NSE;
@@ -384,7 +384,14 @@ function StockCard({ symbol, market, target, stopLoss, entryDate, notes, qty, bu
 
     return (
         <div className={`h-full flex flex-col gap-2 rounded-xl border bg-white p-4 shadow-sm transition-all duration-150 ${isDragging ? "border-blue-400 shadow-lg opacity-50 scale-95" : "border-gray-200"}`}>
-
+            <span
+                draggable
+                onDragStart={onDragStart}
+                className="text-gray-300 cursor-grab active:cursor-grabbing select-none text-base leading-none px-1"
+                title="Drag to reorder"
+            >
+                ⠿
+            </span>
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -839,9 +846,7 @@ export default function Dashboard() {
                     {stocks.map((s, idx) => (
                         <div
                             key={s.id ?? idx}
-                            className={`w-80 transition-all duration-150 ${dropTargetIdx === idx && draggingIdx !== idx ? "ring-2 ring-blue-400 rounded-xl" : ""}`}
-                            draggable
-                            onDragStart={(e) => handleDragStart(e, idx)}
+                            className={`mb-4 break-inside-avoid transition-all duration-150 ${dropTargetIdx === idx && draggingIdx !== idx ? "ring-2 ring-blue-400 rounded-xl" : ""}`}
                             onDragOver={(e) => handleDragOver(e, idx)}
                             onDrop={(e) => handleDrop(e, idx)}
                             onDragEnd={handleDragEnd}
@@ -851,6 +856,7 @@ export default function Dashboard() {
                                 isDragging={draggingIdx === idx}
                                 onRemove={() => removeStock(idx)}
                                 onUpdate={(field, val) => update(idx, field, val)}
+                                onDragStart={(e) => handleDragStart(e, idx)}
                             />
                         </div>
                     ))}
