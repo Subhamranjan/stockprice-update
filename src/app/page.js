@@ -42,7 +42,6 @@ const COMMODITY_PRESETS = [
 ];
 
 const INDEX_PRESETS = [
-    // ── India ──────────────────────────────────────────────
     { label: "Nifty 50", value: "^NSEI", market: "INDEX" },
     { label: "Sensex", value: "^BSESN", market: "INDEX" },
     { label: "Nifty Bank", value: "^NSEBANK", market: "INDEX" },
@@ -58,8 +57,6 @@ const INDEX_PRESETS = [
     { label: "Nifty Infra", value: "^CNXINFRA", market: "INDEX" },
     { label: "Nifty PSU Bank", value: "^CNXPSUBANK", market: "INDEX" },
     { label: "India VIX", value: "^INDIAVIX", market: "INDEX" },
-
-    // ── USA ────────────────────────────────────────────────
     { label: "S&P 500", value: "^GSPC", market: "INDEX" },
     { label: "Nasdaq 100", value: "^NDX", market: "INDEX" },
     { label: "Dow Jones", value: "^DJI", market: "INDEX" },
@@ -67,9 +64,6 @@ const INDEX_PRESETS = [
     { label: "S&P 400 Mid", value: "^MID", market: "INDEX" },
     { label: "NYSE Composite", value: "^NYA", market: "INDEX" },
     { label: "VIX", value: "^VIX", market: "INDEX" },
-    { label: "S&P 500 ESG", value: "^SP500ESG", market: "INDEX" },
-
-    // ── Europe ─────────────────────────────────────────────
     { label: "FTSE 100", value: "^FTSE", market: "INDEX" },
     { label: "DAX", value: "^GDAXI", market: "INDEX" },
     { label: "CAC 40", value: "^FCHI", market: "INDEX" },
@@ -81,8 +75,6 @@ const INDEX_PRESETS = [
     { label: "ATX (Austria)", value: "^ATX", market: "INDEX" },
     { label: "BEL 20", value: "^BFX", market: "INDEX" },
     { label: "FTSE MIB Italy", value: "FTSEMIB.MI", market: "INDEX" },
-
-    // ── Asia ───────────────────────────────────────────────
     { label: "Nikkei 225", value: "^N225", market: "INDEX" },
     { label: "Topix", value: "^TOPX", market: "INDEX" },
     { label: "Hang Seng", value: "^HSI", market: "INDEX" },
@@ -98,21 +90,50 @@ const INDEX_PRESETS = [
     { label: "SET (Thailand)", value: "^SET.BK", market: "INDEX" },
     { label: "KLCI (Malaysia)", value: "^KLSE", market: "INDEX" },
     { label: "PSEi (Philippines)", value: "PSEi.PS", market: "INDEX" },
-
-    // ── Middle East & Africa ───────────────────────────────
     { label: "Tadawul (Saudi)", value: "^TASI.SR", market: "INDEX" },
     { label: "DFM (Dubai)", value: "^DFMGI", market: "INDEX" },
     { label: "ADX (Abu Dhabi)", value: "^FTFADGI", market: "INDEX" },
     { label: "EGX 30 (Egypt)", value: "^CASE30", market: "INDEX" },
     { label: "JSE (S.Africa)", value: "^J203.JO", market: "INDEX" },
     { label: "NSE 20 (Kenya)", value: "^NSE20", market: "INDEX" },
-
-    // ── Americas ───────────────────────────────────────────
     { label: "TSX (Canada)", value: "^GSPTSE", market: "INDEX" },
     { label: "Bovespa (Brazil)", value: "^BVSP", market: "INDEX" },
     { label: "IPC (Mexico)", value: "^MXX", market: "INDEX" },
     { label: "Merval (Argentina)", value: "^MERV", market: "INDEX" },
     { label: "IPSA (Chile)", value: "^IPSA", market: "INDEX" },
+];
+
+const INDEX_GROUPS = [
+    {
+        label: "India",
+        values: ["^NSEI", "^BSESN", "^NSEBANK", "^CNXIT", "^NSEMDCP50",
+            "^NSMIDCP", "^CNXAUTO", "^CNXPHARMA", "^CNXFMCG",
+            "^CNXMETAL", "^CNXENERGY", "^CNXREALTY", "^CNXINFRA",
+            "^CNXPSUBANK", "^INDIAVIX"],
+    },
+    {
+        label: "USA",
+        values: ["^GSPC", "^NDX", "^DJI", "^RUT", "^MID", "^NYA", "^VIX"],
+    },
+    {
+        label: "Europe",
+        values: ["^FTSE", "^GDAXI", "^FCHI", "^STOXX50E", "^IBEX",
+            "^AEX", "^SSMI", "^OMX", "^ATX", "^BFX", "FTSEMIB.MI"],
+    },
+    {
+        label: "Asia",
+        values: ["^N225", "^TOPX", "^HSI", "000001.SS", "399001.SZ",
+            "000300.SS", "^KS11", "^KQ11", "^TWII", "^AXJO",
+            "^STI", "^JKSE", "^SET.BK", "^KLSE", "PSEi.PS"],
+    },
+    {
+        label: "Middle East & Africa",
+        values: ["^TASI.SR", "^DFMGI", "^FTFADGI", "^CASE30", "^J203.JO", "^NSE20"],
+    },
+    {
+        label: "Americas",
+        values: ["^GSPTSE", "^BVSP", "^MXX", "^MERV", "^IPSA"],
+    },
 ];
 
 const REFERENCE_CLOCKS = [
@@ -131,7 +152,7 @@ const REFERENCE_CLOCKS = [
     { label: "Commodities", tz: "America/New_York", open: [18, 0], close: [17, 0], alwaysOpen: true },
 ];
 
-// ── Market hours ────────
+// ── Market hours ─────────────────────────────────────────────────────────────
 
 function getLocalTime(tz) {
     const now = new Date();
@@ -183,9 +204,15 @@ function clockForMarket(marketKey) {
     return { label: m.label, tz: m.tz, open: m.open, close: m.close, alwaysOpen: false };
 }
 
+// ── Days held — counts ALL calendar days including weekends ──────────────────
 function daysSince(dateStr) {
     if (!dateStr) return null;
-    const diff = Date.now() - new Date(dateStr).getTime();
+    const start = new Date(dateStr);
+    start.setHours(0, 0, 0, 0);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const diff = today - start;
+    if (diff < 0) return null;
     return Math.floor(diff / (1000 * 60 * 60 * 24));
 }
 
@@ -202,7 +229,6 @@ function fmtMoney(value, market) {
     if (value === null || value === undefined || isNaN(value)) return "-";
     const decimals = market === "FX" ? 4 : 2;
     const num = value.toLocaleString("en-IN", { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
-    // INDEX has no fixed symbol — just show the number
     if (market === "INDEX") return num;
     return m.symbol ? `${m.symbol}${num}` : num;
 }
@@ -228,6 +254,7 @@ function RangeBar({ price, low52, high52, market }) {
 }
 
 // ── MarketBadge ───────────────────────────────────────────────────────────────
+
 function MarketBadge({ clock }) {
     const [open, setOpen] = useState(isMarketOpenForClock(clock));
     const [countdown, setCountdown] = useState("");
@@ -274,7 +301,7 @@ function ClockSelector({ visible, onToggle }) {
             {open && (
                 <>
                     <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-                    <div className="absolute z-20 mt-1 w-44 rounded-md border border-gray-200 bg-white shadow-lg py-1">
+                    <div className="absolute top-full z-20 mt-1 w-44 rounded-md border border-gray-200 bg-white shadow-lg py-1 max-h-72 overflow-y-auto">
                         {REFERENCE_CLOCKS.map((clock) => (
                             <label
                                 key={clock.label}
@@ -298,7 +325,7 @@ function ClockSelector({ visible, onToggle }) {
 
 // ── StockCard ─────────────────────────────────────────────────────────────────
 
-function StockCard({ symbol, market, target, stopLoss, entryDate, notes, qty, buyPrice, side, mode, onRemove, onUpdate }) {
+function StockCard({ symbol, market, target, stopLoss, entryDate, notes, qty, buyPrice, side, mode, onRemove, onUpdate, isDragging }) {
     const [quote, setQuote] = useState(null);
     const [showNotes, setShowNotes] = useState(false);
     const m = MARKETS[market] || MARKETS.NSE;
@@ -356,11 +383,13 @@ function StockCard({ symbol, market, target, stopLoss, entryDate, notes, qty, bu
         : null;
 
     return (
-        <div className="h-full flex flex-col gap-2 rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+        <div className={`h-full flex flex-col gap-2 rounded-xl border bg-white p-4 shadow-sm transition-all duration-150 ${isDragging ? "border-blue-400 shadow-lg opacity-50 scale-95" : "border-gray-200"}`}>
 
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
+                    {/* Drag handle */}
+                    <span className="text-gray-300 cursor-grab active:cursor-grabbing select-none text-base leading-none" title="Drag to reorder">⠿</span>
                     <h3 className="text-base font-semibold text-gray-900">
                         {market === "COMMODITY"
                             ? (COMMODITY_PRESETS.find(c => c.value === symbol)?.label ?? symbol)
@@ -377,43 +406,31 @@ function StockCard({ symbol, market, target, stopLoss, entryDate, notes, qty, bu
                             ? "border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100"
                             : "border-blue-300 bg-blue-50 text-blue-700 hover:bg-blue-100"
                             }`}
-                        title={isTrading ? "Switch to watch-only" : "Switch to trading mode"}
                     >
                         {isTrading ? "Trading" : "Watch"}
                     </button>
                     {isTrading && (
-                        <button onClick={() => setShowNotes(v => !v)} className="text-xs text-gray-400 hover:text-blue-500 transition-colors" title="Trade notes">📝</button>
+                        <button onClick={() => setShowNotes(v => !v)} className="text-xs text-gray-400 hover:text-blue-500 transition-colors">📝</button>
                     )}
                     <button
                         onClick={onRemove}
                         className="w-6 h-6 rounded-md border border-gray-300 text-gray-400 hover:text-red-600 hover:border-red-300 hover:bg-red-50 transition-colors flex items-center justify-center text-base leading-none"
-                        title="Remove this card"
-                    >
-                        ×
-                    </button>
+                    >×</button>
                 </div>
             </div>
 
-            {/* Qty row */}
+            {/* Qty */}
             {isTrading && (
                 <div className="flex items-center justify-between">
                     <span className="text-xs text-gray-400">Qty</span>
                     <div className="flex items-center gap-1.5">
-                        <button
-                            onClick={() => onUpdate("qty", Math.max(1, (qty || 1) - 1))}
-                            className="w-6 h-6 rounded-md border border-gray-300 text-gray-600 hover:bg-gray-100 text-sm font-medium flex items-center justify-center"
-                        >−</button>
-                        <input
-                            type="number"
-                            value={qty || 1}
-                            min={1}
+                        <button onClick={() => onUpdate("qty", Math.max(1, (qty || 1) - 1))}
+                            className="w-6 h-6 rounded-md border border-gray-300 text-gray-600 hover:bg-gray-100 text-sm font-medium flex items-center justify-center">−</button>
+                        <input type="number" value={qty || 1} min={1}
                             onChange={(e) => onUpdate("qty", Math.max(1, Number(e.target.value)))}
-                            className="w-16 text-center text-sm font-semibold text-gray-800 border border-gray-300 rounded-md py-0.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        />
-                        <button
-                            onClick={() => onUpdate("qty", (qty || 1) + 1)}
-                            className="w-6 h-6 rounded-md border border-gray-300 text-gray-600 hover:bg-gray-100 text-sm font-medium flex items-center justify-center"
-                        >+</button>
+                            className="w-16 text-center text-sm font-semibold text-gray-800 border border-gray-300 rounded-md py-0.5 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                        <button onClick={() => onUpdate("qty", (qty || 1) + 1)}
+                            className="w-6 h-6 rounded-md border border-gray-300 text-gray-600 hover:bg-gray-100 text-sm font-medium flex items-center justify-center">+</button>
                     </div>
                     <span className="text-xs text-gray-400">
                         {price !== null && qty ? fmtMoney(price * qty, market) : ""}
@@ -421,23 +438,15 @@ function StockCard({ symbol, market, target, stopLoss, entryDate, notes, qty, bu
                 </div>
             )}
 
-            {/* Buy / Sell toggle */}
+            {/* Buy / Sell */}
             {isTrading && (
                 <div className="flex items-center justify-between">
                     <span className="text-xs text-gray-400">Direction</span>
                     <div className="flex rounded-md overflow-hidden border border-gray-300 text-xs font-medium">
-                        <button
-                            onClick={() => onUpdate("side", "buy")}
-                            className={`px-3 py-1 transition-colors ${side === "buy"
-                                ? "bg-green-500 text-white"
-                                : "bg-white text-gray-500 hover:bg-gray-50"}`}
-                        >Buy</button>
-                        <button
-                            onClick={() => onUpdate("side", "sell")}
-                            className={`px-3 py-1 transition-colors ${side === "sell"
-                                ? "bg-red-500 text-white"
-                                : "bg-white text-gray-500 hover:bg-gray-50"}`}
-                        >Sell</button>
+                        <button onClick={() => onUpdate("side", "buy")}
+                            className={`px-3 py-1 transition-colors ${side === "buy" ? "bg-green-500 text-white" : "bg-white text-gray-500 hover:bg-gray-50"}`}>Buy</button>
+                        <button onClick={() => onUpdate("side", "sell")}
+                            className={`px-3 py-1 transition-colors ${side === "sell" ? "bg-red-500 text-white" : "bg-white text-gray-500 hover:bg-gray-50"}`}>Sell</button>
                     </div>
                 </div>
             )}
@@ -457,12 +466,12 @@ function StockCard({ symbol, market, target, stopLoss, entryDate, notes, qty, bu
             {/* Status badge */}
             <span className={`self-start rounded-md px-2.5 py-1 text-xs font-medium ${badgeClasses}`}>{status}</span>
 
-            {/* 52W range — shown in both modes */}
+            {/* 52W range */}
             {quote?.low52Week && quote?.high52Week && (
                 <RangeBar price={price} low52={quote.low52Week} high52={quote.high52Week} market={market} />
             )}
 
-            {/* Stats grid — trading mode only */}
+            {/* Stats grid */}
             {isTrading && (
                 <div className="grid grid-cols-3 gap-1 mt-1 text-center">
                     <div className="rounded-lg bg-gray-50 px-2 py-1.5">
@@ -485,7 +494,9 @@ function StockCard({ symbol, market, target, stopLoss, entryDate, notes, qty, bu
                     </div>
                     <div className="rounded-lg bg-gray-50 px-2 py-1.5">
                         <p className="text-[10px] text-gray-400">Days held</p>
-                        <p className="text-xs font-semibold text-gray-700">{daysHeld ?? "-"}</p>
+                        <p className="text-xs font-semibold text-gray-700">
+                            {daysHeld !== null ? `${daysHeld}d` : "-"}
+                        </p>
                     </div>
                     <div className="col-span-2 rounded-lg bg-gray-50 px-2 py-1.5">
                         <p className="text-[10px] text-gray-400">R : R</p>
@@ -494,7 +505,7 @@ function StockCard({ symbol, market, target, stopLoss, entryDate, notes, qty, bu
                 </div>
             )}
 
-            {/* Inputs — trading mode only */}
+            {/* Inputs */}
             {isTrading && (
                 <div className="mt-1 flex flex-col gap-1.5">
                     <label className="flex items-center justify-between text-sm text-gray-600">
@@ -521,22 +532,16 @@ function StockCard({ symbol, market, target, stopLoss, entryDate, notes, qty, bu
                 </div>
             )}
 
-            {/* P&L — trading mode only */}
+            {/* P&L */}
             {isTrading && buyPrice > 0 && price !== null && qty > 0 && (() => {
-                const pnl = side === "buy"
-                    ? (price - buyPrice) * qty
-                    : (buyPrice - price) * qty;
-                const pnlPct = side === "buy"
-                    ? ((price - buyPrice) / buyPrice) * 100
-                    : ((buyPrice - price) / buyPrice) * 100;
+                const pnl = side === "buy" ? (price - buyPrice) * qty : (buyPrice - price) * qty;
+                const pnlPct = side === "buy" ? ((price - buyPrice) / buyPrice) * 100 : ((buyPrice - price) / buyPrice) * 100;
                 const isProfit = pnl >= 0;
                 return (
                     <div className={`rounded-lg px-3 py-2 ${isProfit ? "bg-green-50 border border-green-100" : "bg-red-50 border border-red-100"}`}>
                         <div className="flex items-center justify-between">
-                            <span className="text-[10px] text-gray-400">P&L ({daysHeld ?? 0}d)</span>
-                            <span className={`text-[10px] font-medium ${isProfit ? "text-green-600" : "text-red-500"}`}>
-                                {pnlPct.toFixed(2)}%
-                            </span>
+                            <span className="text-[10px] text-gray-400">P&L ({daysHeld !== null ? `${daysHeld}d` : "0d"})</span>
+                            <span className={`text-[10px] font-medium ${isProfit ? "text-green-600" : "text-red-500"}`}>{pnlPct.toFixed(2)}%</span>
                         </div>
                         <p className={`text-base font-semibold ${isProfit ? "text-green-600" : "text-red-500"}`}>
                             {isProfit ? "+" : ""}{fmtMoney(pnl, market)}
@@ -549,7 +554,7 @@ function StockCard({ symbol, market, target, stopLoss, entryDate, notes, qty, bu
                 );
             })()}
 
-            {/* Notes — trading mode only */}
+            {/* Notes */}
             {isTrading && showNotes && (
                 <textarea value={notes || ""} onChange={(e) => onUpdate("notes", e.target.value)}
                     placeholder="Trade thesis, setup, key levels..." rows={3}
@@ -559,26 +564,26 @@ function StockCard({ symbol, market, target, stopLoss, entryDate, notes, qty, bu
     );
 }
 
-// ── Responsive column count ─────────────────────────────────────────────────
+// ── Responsive columns ────────────────────────────────────────────────────────
 
 function useResponsiveColumns(desktopColumns = 4) {
     const [columns, setColumns] = useState(desktopColumns);
-
     useEffect(() => {
         const compute = () => {
             const w = window.innerWidth;
-            if (w < 640) return 1;       // phone
-            if (w < 1024) return 2;      // tablet
-            return desktopColumns;       // desktop
+            if (w < 640) return 1;
+            if (w < 1024) return 2;
+            return desktopColumns;
         };
         const onResize = () => setColumns(compute());
         onResize();
         window.addEventListener("resize", onResize);
         return () => window.removeEventListener("resize", onResize);
     }, [desktopColumns]);
-
     return columns;
 }
+
+// ── Dashboard ─────────────────────────────────────────────────────────────────
 
 export default function Dashboard() {
     const [stocks, setStocks] = useState([]);
@@ -586,43 +591,39 @@ export default function Dashboard() {
     const [selectedMarket, setSelectedMarket] = useState("NSE");
     const [loaded, setLoaded] = useState(false);
     const [commodityOpen, setCommodityOpen] = useState(false);
+    const [indicesOpen, setIndicesOpen] = useState(false);
     const [visibleClocks, setVisibleClocks] = useState(REFERENCE_CLOCKS.map(c => c.label));
     const [layout, setLayout] = useState("masonry");
     const columns = useResponsiveColumns(4);
-    const [indicesOpen, setIndicesOpen] = useState(false);
+    const updateTimers = useRef({});
 
-    // ── Load watchlist from DB on mount ──────────────────────────────────────
+    // ── Drag state ────────────────────────────────────────────────────────────
+    const dragIdx = useRef(null);       // index being dragged
+    const dragOverIdx = useRef(null);   // index being hovered over
+    const [draggingIdx, setDraggingIdx] = useState(null);
+    const [dropTargetIdx, setDropTargetIdx] = useState(null);
+
+    // ── Load watchlist ────────────────────────────────────────────────────────
     useEffect(() => {
         fetch("/api/watchlist")
             .then(r => r.json())
-            .then(data => {
-                setStocks(Array.isArray(data) ? data : []);
-                setLoaded(true);
-            })
+            .then(data => { setStocks(Array.isArray(data) ? data : []); setLoaded(true); })
             .catch(() => setLoaded(true));
     }, []);
 
-    // Load visible clocks from DB on mount
+    // ── Load clocks ───────────────────────────────────────────────────────────
     useEffect(() => {
         fetch("/api/clocks")
             .then(r => r.json())
             .then(data => {
-                if (Array.isArray(data)) {
-                    const visible = data.filter(c => c.visible).map(c => c.label);
-                    setVisibleClocks(visible);
-                }
+                if (Array.isArray(data)) setVisibleClocks(data.filter(c => c.visible).map(c => c.label));
             })
             .catch(() => { });
     }, []);
 
-    // Toggle clock visibility — update DB
     const toggleClock = async (label) => {
         const isVisible = visibleClocks.includes(label);
-        // Optimistic update
-        setVisibleClocks(prev =>
-            isVisible ? prev.filter(l => l !== label) : [...prev, label]
-        );
-        // Persist to DB
+        setVisibleClocks(prev => isVisible ? prev.filter(l => l !== label) : [...prev, label]);
         await fetch("/api/clocks", {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
@@ -630,25 +631,17 @@ export default function Dashboard() {
         });
     };
 
-    // ── Add stock → POST to DB ───────────────────────────────────────────────
+    // ── Add stock ─────────────────────────────────────────────────────────────
     const addStock = async (overrideSymbol, overrideMarket) => {
         const sym = typeof overrideSymbol === "string" ? overrideSymbol : search;
         const mkt = overrideMarket ?? selectedMarket;
         if (!sym) return;
-
         const newStock = {
             symbol: overrideSymbol ? sym : sym.toUpperCase(),
-            market: mkt,
-            target: 0,
-            stopLoss: 0,
-            entryDate: "",
-            notes: "",
-            qty: 1,
-            buyPrice: 0,
-            side: "buy",
-            mode: (mkt === "COMMODITY" || mkt === "INDEX") ? "watch" : "trade",
+            market: mkt, target: 0, stopLoss: 0,
+            entryDate: "", notes: "", qty: 1, buyPrice: 0,
+            side: "buy", mode: (mkt === "COMMODITY" || mkt === "INDEX") ? "watch" : "trade",
         };
-
         const res = await fetch("/api/watchlist", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -657,23 +650,17 @@ export default function Dashboard() {
         const saved = await res.json();
         setStocks(prev => [...prev, saved]);
         setSearch("");
-        setShowCommodities(false);
+        setCommodityOpen(false);
+        setIndicesOpen(false);
     };
 
-    // ── Update field → PUT to DB (debounced 600ms) ───────────────────────────
-    const updateTimers = useRef({});
-
+    // ── Update field ──────────────────────────────────────────────────────────
     const update = (idx, field, value) => {
-        // Optimistic update in UI immediately
         setStocks(prev => {
             const copy = [...prev];
-            copy[idx] = {
-                ...copy[idx],
-                [field]: ["target", "stopLoss", "qty", "buyPrice"].includes(field) ? Number(value) : value,
-            };
+            copy[idx] = { ...copy[idx], [field]: ["target", "stopLoss", "qty", "buyPrice"].includes(field) ? Number(value) : value };
             return copy;
         });
-
         clearTimeout(updateTimers.current[idx]);
         updateTimers.current[idx] = setTimeout(() => {
             setStocks(prev => {
@@ -689,13 +676,50 @@ export default function Dashboard() {
         }, 600);
     };
 
-    // ── Remove stock → DELETE from DB ────────────────────────────────────────
+    // ── Remove stock ──────────────────────────────────────────────────────────
     const removeStock = async (idx) => {
         const stock = stocks[idx];
-        setStocks(prev => prev.filter((_, i) => i !== idx)); // optimistic
-        if (stock?.id) {
-            await fetch(`/api/watchlist/${stock.id}`, { method: "DELETE" });
+        setStocks(prev => prev.filter((_, i) => i !== idx));
+        if (stock?.id) await fetch(`/api/watchlist/${stock.id}`, { method: "DELETE" });
+    };
+
+    // ── Drag handlers ─────────────────────────────────────────────────────────
+    const handleDragStart = (e, idx) => {
+        dragIdx.current = idx;
+        setDraggingIdx(idx);
+        e.dataTransfer.effectAllowed = "move";
+    };
+
+    const handleDragOver = (e, idx) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = "move";
+        if (dragOverIdx.current !== idx) {
+            dragOverIdx.current = idx;
+            setDropTargetIdx(idx);
         }
+    };
+
+    const handleDrop = (e, idx) => {
+        e.preventDefault();
+        const from = dragIdx.current;
+        if (from === null || from === idx) return;
+        setStocks(prev => {
+            const copy = [...prev];
+            const [moved] = copy.splice(from, 1);
+            copy.splice(idx, 0, moved);
+            return copy;
+        });
+        dragIdx.current = null;
+        dragOverIdx.current = null;
+        setDraggingIdx(null);
+        setDropTargetIdx(null);
+    };
+
+    const handleDragEnd = () => {
+        dragIdx.current = null;
+        dragOverIdx.current = null;
+        setDraggingIdx(null);
+        setDropTargetIdx(null);
     };
 
     if (!loaded) return (
@@ -718,8 +742,7 @@ export default function Dashboard() {
                         .filter(([k]) => k !== "COMMODITY" && k !== "INDEX")
                         .map(([key, m]) => (
                             <option key={key} value={key}>{m.label}</option>
-                        ))
-                    }
+                        ))}
                 </select>
 
                 <MarketBadge clock={clockForMarket(selectedMarket)} />
@@ -739,7 +762,7 @@ export default function Dashboard() {
                     Add
                 </button>
 
-                {/* ── Commodities dropdown ── */}
+                {/* Commodities dropdown */}
                 <div className="relative">
                     <button
                         onClick={() => { setCommodityOpen(v => !v); setIndicesOpen(false); }}
@@ -765,7 +788,7 @@ export default function Dashboard() {
                     )}
                 </div>
 
-                {/* ── Indices dropdown ── */}
+                {/* Indices dropdown */}
                 <div className="relative">
                     <button
                         onClick={() => { setIndicesOpen(v => !v); setCommodityOpen(false); }}
@@ -777,39 +800,7 @@ export default function Dashboard() {
                         <>
                             <div className="fixed inset-0 z-10" onClick={() => setIndicesOpen(false)} />
                             <div className="absolute top-full left-0 z-20 mt-1 w-52 rounded-md border border-gray-200 bg-white shadow-lg py-1 max-h-80 overflow-y-auto">
-                                {[
-                                    {
-                                        label: "India",
-                                        values: ["^NSEI", "^BSESN", "^NSEBANK", "^CNXIT", "^NSEMDCP50",
-                                            "^NSMIDCP", "^CNXAUTO", "^CNXPHARMA", "^CNXFMCG",
-                                            "^CNXMETAL", "^CNXENERGY", "^CNXREALTY", "^CNXINFRA",
-                                            "^CNXPSUBANK", "^INDIAVIX"]
-                                    },
-                                    {
-                                        label: "USA",
-                                        values: ["^GSPC", "^NDX", "^DJI", "^RUT", "^MID", "^NYA", "^VIX"]
-                                    },
-                                    {
-                                        label: "Europe",
-                                        values: ["^FTSE", "^GDAXI", "^FCHI", "^STOXX50E", "^IBEX",
-                                            "^AEX", "^SSMI", "^OMX", "^ATX", "^BFX", "FTSEMIB.MI"]
-                                    },
-                                    {
-                                        label: "Asia",
-                                        values: ["^N225", "^TOPX", "^HSI", "000001.SS", "399001.SZ",
-                                            "000300.SS", "^KS11", "^KQ11", "^TWII", "^AXJO",
-                                            "^STI", "^JKSE", "^SET.BK", "^KLSE", "PSEi.PS"]
-                                    },
-                                    {
-                                        label: "Middle East & Africa",
-                                        values: ["^TASI.SR", "^DFMGI", "^FTFADGI", "^CASE30",
-                                            "^J203.JO", "^NSE20"]
-                                    },
-                                    {
-                                        label: "Americas",
-                                        values: ["^GSPTSE", "^BVSP", "^MXX", "^MERV", "^IPSA"]
-                                    },
-                                ].map((group) => (
+                                {INDEX_GROUPS.map((group) => (
                                     <div key={group.label}>
                                         <p className="px-3 pt-2 pb-1 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
                                             {group.label}
@@ -824,8 +815,7 @@ export default function Dashboard() {
                                                 >
                                                     {idx.label}
                                                 </button>
-                                            ))
-                                        }
+                                            ))}
                                     </div>
                                 ))}
                             </div>
@@ -843,19 +833,46 @@ export default function Dashboard() {
                 </div>
             )}
 
+            {/* Cards with drag and drop */}
             {layout === "wide" ? (
                 <div className="flex flex-wrap gap-4">
                     {stocks.map((s, idx) => (
-                        <div key={s.id ?? idx} className="w-80">
-                            <StockCard {...s} onRemove={() => removeStock(idx)} onUpdate={(field, val) => update(idx, field, val)} />
+                        <div
+                            key={s.id ?? idx}
+                            className={`w-80 transition-all duration-150 ${dropTargetIdx === idx && draggingIdx !== idx ? "ring-2 ring-blue-400 rounded-xl" : ""}`}
+                            draggable
+                            onDragStart={(e) => handleDragStart(e, idx)}
+                            onDragOver={(e) => handleDragOver(e, idx)}
+                            onDrop={(e) => handleDrop(e, idx)}
+                            onDragEnd={handleDragEnd}
+                        >
+                            <StockCard
+                                {...s}
+                                isDragging={draggingIdx === idx}
+                                onRemove={() => removeStock(idx)}
+                                onUpdate={(field, val) => update(idx, field, val)}
+                            />
                         </div>
                     ))}
                 </div>
             ) : (
-                <div className="gap-4" style={{ columnCount: columns, columnGap: "1rem" }}>
+                <div style={{ columnCount: columns, columnGap: "1rem" }}>
                     {stocks.map((s, idx) => (
-                        <div key={s.id ?? idx} className="mb-4 break-inside-avoid">
-                            <StockCard {...s} onRemove={() => removeStock(idx)} onUpdate={(field, val) => update(idx, field, val)} />
+                        <div
+                            key={s.id ?? idx}
+                            className={`mb-4 break-inside-avoid transition-all duration-150 ${dropTargetIdx === idx && draggingIdx !== idx ? "ring-2 ring-blue-400 rounded-xl" : ""}`}
+                            draggable
+                            onDragStart={(e) => handleDragStart(e, idx)}
+                            onDragOver={(e) => handleDragOver(e, idx)}
+                            onDrop={(e) => handleDrop(e, idx)}
+                            onDragEnd={handleDragEnd}
+                        >
+                            <StockCard
+                                {...s}
+                                isDragging={draggingIdx === idx}
+                                onRemove={() => removeStock(idx)}
+                                onUpdate={(field, val) => update(idx, field, val)}
+                            />
                         </div>
                     ))}
                 </div>
