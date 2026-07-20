@@ -384,19 +384,17 @@ function StockCard({ symbol, market, target, stopLoss, entryDate, notes, qty, bu
 
     return (
         <div className={`h-full flex flex-col gap-2 rounded-xl border bg-white p-4 shadow-sm transition-all duration-150 ${isDragging ? "border-blue-400 shadow-lg opacity-50 scale-95" : "border-gray-200"}`}>
-            <span
-                draggable
-                onDragStart={onDragStart}
-                className="text-gray-300 cursor-grab active:cursor-grabbing select-none text-base leading-none px-1"
-                title="Drag to reorder"
-            >
-                ⠿
-            </span>
+
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                     {/* Drag handle */}
-                    <span className="text-gray-300 cursor-grab active:cursor-grabbing select-none text-base leading-none" title="Drag to reorder">⠿</span>
+                    <span
+                        draggable
+                        onDragStart={onDragStart}
+                        className="text-gray-300 cursor-grab active:cursor-grabbing select-none text-base leading-none px-1"
+                        title="Drag to reorder"
+                    >⠿</span>
                     <h3 className="text-base font-semibold text-gray-900">
                         {market === "COMMODITY"
                             ? (COMMODITY_PRESETS.find(c => c.value === symbol)?.label ?? symbol)
