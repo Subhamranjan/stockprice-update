@@ -1,54 +1,56 @@
-import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import pool from "@/lib/db";
+import { NextRequest } from "next/server";
 
-const toRow = (s: any) => ({
-    symbol: s.symbol,
-    market: s.market,
-    target: s.target ?? 0,
-    stop_loss: s.stopLoss ?? 0,
-    entry_date: s.entryDate || null,
-    notes: s.notes ?? '',
-    qty: s.qty ?? 1,
-    buy_price: s.buyPrice ?? 0,
-    side: s.side ?? 'buy',
-    mode: s.mode ?? 'trade',
-})
-
-const toStock = (r: any) => ({
-    id: r.id,
-    symbol: r.symbol,
-    market: r.market,
-    target: r.target,
-    stopLoss: r.stop_loss,
-    entryDate: r.entry_date,
-    notes: r.notes,
-    qty: r.qty,
-    buyPrice: r.buy_price,
-    side: r.side,
-    mode: r.mode,
-})
-
-export async function GET() {
-    const supabase = await createClient()
-    const { data, error } = await supabase
-        .from('watchlist')
-        .select('*')
-        .order('created_at', { ascending: true })
-
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-    return NextResponse.json(data.map(toStock))
+function dbToClient(row: any) {
+    return {
+        id: row.id,
+        symbol: row.symbol,
+        market: row.market,
+        target: Number(row.target),
+        stopLoss: Number(row.stop_loss),
+        buyPrice: Number(row.buy_price),
+        qty: row.qty,
+        side: row.side,
+        mode: row.mode,
+        entryDate: row.entry_date ? row.entry_date.toISOString().split("T")[0] : "",
+        notes: row.notes ?? "",
+    };
 }
 
-export async function POST(req: Request) {
-    const supabase = await createClient()
-    const body = await req.json()
+export async function GET() {
+    try {
+        const { rows } = await pool.query("SELECT * FROM watchlist ORDER BY created_at ASC");
+        return Response.json(rows.map(dbToClient));
+    } catch (err: any) {
+        console.error("GET /api/watchlist:", err.message);
+        return Response.json({ error: err.message }, { status: 500 });
+    }
+}
 
-    const { data, error } = await supabase
-        .from('watchlist')
-        .insert(toRow(body))
-        .select()
-        .single()
-
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-    return NextResponse.json(toStock(data))
+export async function POST(req: NextRequest) {
+    try {
+        const body = await req.json();
+        const { rows } = await pool.query(
+            `INSERT INTO watchlist
+                (symbol, market, target, stop_loss, buy_price, qty, side, mode, entry_date, notes)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+             RETURNING *`,
+            [
+                body.symbol,
+                body.market ?? "NSE",
+                body.target ?? 0,
+                body.stopLoss ?? 0,
+                body.buyPrice ?? 0,
+                body.qty ?? 1,
+                body.side ?? "buy",
+                body.mode ?? "trade",
+                body.entryDate || null,
+                body.notes ?? "",
+            ]
+        );
+        return Response.json(dbToClient(rows[0]), { status: 201 });
+    } catch (err: any) {
+        console.error("POST /api/watchlist:", err.message);
+        return Response.json({ error: err.message }, { status: 500 });
+    }
 }
