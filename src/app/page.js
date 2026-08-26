@@ -1,392 +1,392 @@
 "use client";
 
-import { usestate, useeffect, useref, usememo } from "react";
-import { getquote } from "./actions";
-import { gethistory } from "./actions";
+import { useState, useEffect, useRef, useMemo } from "react";
+import { getQuote } from "./actions";
+import { getHistory } from "./actions";
 
 
-const refresh_interval = 300000;
+const REFRESH_INTERVAL = 300000;
 
-const markets = {
-    nse: { suffix: ".ns", currency: "inr", symbol: "₹", label: "nse", tz: "asia/kolkata", open: [9, 15], close: [15, 30] },
-    bse: { suffix: ".bo", currency: "inr", symbol: "₹", label: "bse", tz: "asia/kolkata", open: [9, 15], close: [15, 30] },
-    nasdaq: { suffix: "", currency: "usd", symbol: "$", label: "nasdaq", tz: "america/new_york", open: [9, 30], close: [16, 0] },
-    nyse: { suffix: "", currency: "usd", symbol: "$", label: "nyse", tz: "america/new_york", open: [9, 30], close: [16, 0] },
-    tse: { suffix: ".t", currency: "jpy", symbol: "¥", label: "tokyo", tz: "asia/tokyo", open: [9, 0], close: [15, 0] },
-    lse: { suffix: ".l", currency: "gbp", symbol: "£", label: "lse", tz: "europe/london", open: [8, 0], close: [16, 30] },
-    hkex: { suffix: ".hk", currency: "hkd", symbol: "hk$", label: "hkex", tz: "asia/hong_kong", open: [9, 30], close: [16, 0] },
-    sse: { suffix: ".ss", currency: "cny", symbol: "¥", label: "shanghai", tz: "asia/shanghai", open: [9, 30], close: [15, 0] },
-    sgx: { suffix: ".si", currency: "sgd", symbol: "s$", label: "sgx", tz: "asia/singapore", open: [9, 0], close: [17, 0] },
-    asx: { suffix: ".ax", currency: "aud", symbol: "a$", label: "asx", tz: "australia/sydney", open: [10, 0], close: [16, 0] },
-    krx: { suffix: ".ks", currency: "krw", symbol: "₩", label: "krx", tz: "asia/seoul", open: [9, 0], close: [15, 30] },
-    twse: { suffix: ".tw", currency: "twd", symbol: "nt$", label: "twse", tz: "asia/taipei", open: [9, 0], close: [13, 30] },
-    jse: { suffix: ".jo", currency: "zar", symbol: "r", label: "jse", tz: "africa/johannesburg", open: [9, 0], close: [17, 0] },
-    tadawul: { suffix: ".sr", currency: "sar", symbol: "﷼", label: "tadawul", tz: "asia/riyadh", open: [10, 0], close: [15, 0] },
-    b3: { suffix: ".sa", currency: "brl", symbol: "r$", label: "b3", tz: "america/sao_paulo", open: [10, 0], close: [18, 0] },
-    tsx: { suffix: ".to", currency: "cad", symbol: "c$", label: "tsx", tz: "america/toronto", open: [9, 30], close: [16, 0] },
-    commodity: { suffix: "", currency: "usd", symbol: "$", label: "commodity", tz: "america/new_york", open: [18, 0], close: [17, 0] },
-    index: { suffix: "", currency: "", symbol: "", label: "index", tz: "asia/kolkata", open: [9, 0], close: [16, 0] },
+const MARKETS = {
+    NSE: { suffix: ".NS", currency: "INR", symbol: "₹", label: "NSE", tz: "Asia/Kolkata", open: [9, 15], close: [15, 30] },
+    BSE: { suffix: ".BO", currency: "INR", symbol: "₹", label: "BSE", tz: "Asia/Kolkata", open: [9, 15], close: [15, 30] },
+    NASDAQ: { suffix: "", currency: "USD", symbol: "$", label: "NASDAQ", tz: "America/New_York", open: [9, 30], close: [16, 0] },
+    NYSE: { suffix: "", currency: "USD", symbol: "$", label: "NYSE", tz: "America/New_York", open: [9, 30], close: [16, 0] },
+    TSE: { suffix: ".T", currency: "JPY", symbol: "¥", label: "Tokyo", tz: "Asia/Tokyo", open: [9, 0], close: [15, 0] },
+    LSE: { suffix: ".L", currency: "GBP", symbol: "£", label: "LSE", tz: "Europe/London", open: [8, 0], close: [16, 30] },
+    HKEX: { suffix: ".HK", currency: "HKD", symbol: "HK$", label: "HKEX", tz: "Asia/Hong_Kong", open: [9, 30], close: [16, 0] },
+    SSE: { suffix: ".SS", currency: "CNY", symbol: "¥", label: "Shanghai", tz: "Asia/Shanghai", open: [9, 30], close: [15, 0] },
+    SGX: { suffix: ".SI", currency: "SGD", symbol: "S$", label: "SGX", tz: "Asia/Singapore", open: [9, 0], close: [17, 0] },
+    ASX: { suffix: ".AX", currency: "AUD", symbol: "A$", label: "ASX", tz: "Australia/Sydney", open: [10, 0], close: [16, 0] },
+    KRX: { suffix: ".KS", currency: "KRW", symbol: "₩", label: "KRX", tz: "Asia/Seoul", open: [9, 0], close: [15, 30] },
+    TWSE: { suffix: ".TW", currency: "TWD", symbol: "NT$", label: "TWSE", tz: "Asia/Taipei", open: [9, 0], close: [13, 30] },
+    JSE: { suffix: ".JO", currency: "ZAR", symbol: "R", label: "JSE", tz: "Africa/Johannesburg", open: [9, 0], close: [17, 0] },
+    TADAWUL: { suffix: ".SR", currency: "SAR", symbol: "﷼", label: "Tadawul", tz: "Asia/Riyadh", open: [10, 0], close: [15, 0] },
+    B3: { suffix: ".SA", currency: "BRL", symbol: "R$", label: "B3", tz: "America/Sao_Paulo", open: [10, 0], close: [18, 0] },
+    TSX: { suffix: ".TO", currency: "CAD", symbol: "C$", label: "TSX", tz: "America/Toronto", open: [9, 30], close: [16, 0] },
+    COMMODITY: { suffix: "", currency: "USD", symbol: "$", label: "Commodity", tz: "America/New_York", open: [18, 0], close: [17, 0] },
+    INDEX: { suffix: "", currency: "", symbol: "", label: "Index", tz: "Asia/Kolkata", open: [9, 0], close: [16, 0] },
 };
 
-const commodity_presets = [
-    { label: "gold", value: "gc=f" },
-    { label: "silver", value: "si=f" },
-    { label: "crude oil", value: "cl=f" },
-    { label: "brent crude", value: "bz=f" },
-    { label: "natural gas", value: "ng=f" },
-    { label: "copper", value: "hg=f" },
-    { label: "platinum", value: "pl=f" },
-    { label: "corn", value: "zc=f" },
-    { label: "wheat", value: "zw=f" },
-    { label: "soybean", value: "zs=f" },
-    { label: "cotton", value: "ct=f" },
-    { label: "coffee", value: "kc=f" },
+const COMMODITY_PRESETS = [
+    { label: "Gold", value: "GC=F" },
+    { label: "Silver", value: "SI=F" },
+    { label: "Crude Oil", value: "CL=F" },
+    { label: "Brent Crude", value: "BZ=F" },
+    { label: "Natural Gas", value: "NG=F" },
+    { label: "Copper", value: "HG=F" },
+    { label: "Platinum", value: "PL=F" },
+    { label: "Corn", value: "ZC=F" },
+    { label: "Wheat", value: "ZW=F" },
+    { label: "Soybean", value: "ZS=F" },
+    { label: "Cotton", value: "CT=F" },
+    { label: "Coffee", value: "KC=F" },
 ];
 
-const index_presets = [
-    { label: "nifty 50", value: "^nsei", market: "index" },
-    { label: "sensex", value: "^bsesn", market: "index" },
-    { label: "nifty bank", value: "^nsebank", market: "index" },
-    { label: "nifty it", value: "^cnxit", market: "index" },
-    { label: "nifty midcap 50", value: "^nsemdcp50", market: "index" },
-    { label: "nifty next 50", value: "^nsmidcp", market: "index" },
-    { label: "nifty auto", value: "^cnxauto", market: "index" },
-    { label: "nifty pharma", value: "^cnxpharma", market: "index" },
-    { label: "nifty fmcg", value: "^cnxfmcg", market: "index" },
-    { label: "nifty metal", value: "^cnxmetal", market: "index" },
-    { label: "nifty energy", value: "^cnxenergy", market: "index" },
-    { label: "nifty realty", value: "^cnxrealty", market: "index" },
-    { label: "nifty infra", value: "^cnxinfra", market: "index" },
-    { label: "nifty psu bank", value: "^cnxpsubank", market: "index" },
-    { label: "india vix", value: "^indiavix", market: "index" },
-    { label: "s&p 500", value: "^gspc", market: "index" },
-    { label: "nasdaq 100", value: "^ndx", market: "index" },
-    { label: "dow jones", value: "^dji", market: "index" },
-    { label: "russell 2000", value: "^rut", market: "index" },
-    { label: "s&p 400 mid", value: "^mid", market: "index" },
-    { label: "nyse composite", value: "^nya", market: "index" },
-    { label: "vix", value: "^vix", market: "index" },
-    { label: "ftse 100", value: "^ftse", market: "index" },
-    { label: "dax", value: "^gdaxi", market: "index" },
-    { label: "cac 40", value: "^fchi", market: "index" },
-    { label: "euro stoxx 50", value: "^stoxx50e", market: "index" },
-    { label: "ibex 35", value: "^ibex", market: "index" },
-    { label: "aex (amsterdam)", value: "^aex", market: "index" },
-    { label: "smi (swiss)", value: "^ssmi", market: "index" },
-    { label: "omx (stockholm)", value: "^omx", market: "index" },
-    { label: "atx (austria)", value: "^atx", market: "index" },
-    { label: "bel 20", value: "^bfx", market: "index" },
-    { label: "ftse mib italy", value: "ftsemib.mi", market: "index" },
-    { label: "nikkei 225", value: "^n225", market: "index" },
-    { label: "topix", value: "^topx", market: "index" },
-    { label: "hang seng", value: "^hsi", market: "index" },
-    { label: "shanghai", value: "000001.ss", market: "index" },
-    { label: "shenzhen", value: "399001.sz", market: "index" },
-    { label: "csi 300", value: "000300.ss", market: "index" },
-    { label: "kospi", value: "^ks11", market: "index" },
-    { label: "kosdaq", value: "^kq11", market: "index" },
-    { label: "taiwan twse", value: "^twii", market: "index" },
-    { label: "asx 200", value: "^axjo", market: "index" },
-    { label: "straits times", value: "^sti", market: "index" },
-    { label: "jakarta (idx)", value: "^jkse", market: "index" },
-    { label: "set (thailand)", value: "^set.bk", market: "index" },
-    { label: "klci (malaysia)", value: "^klse", market: "index" },
-    { label: "psei (philippines)", value: "psei.ps", market: "index" },
-    { label: "tadawul (saudi)", value: "^tasi.sr", market: "index" },
-    { label: "dfm (dubai)", value: "^dfmgi", market: "index" },
-    { label: "adx (abu dhabi)", value: "^ftfadgi", market: "index" },
-    { label: "egx 30 (egypt)", value: "^case30", market: "index" },
-    { label: "jse (s.africa)", value: "^j203.jo", market: "index" },
-    { label: "nse 20 (kenya)", value: "^nse20", market: "index" },
-    { label: "tsx (canada)", value: "^gsptse", market: "index" },
-    { label: "bovespa (brazil)", value: "^bvsp", market: "index" },
-    { label: "ipc (mexico)", value: "^mxx", market: "index" },
-    { label: "merval (argentina)", value: "^merv", market: "index" },
-    { label: "ipsa (chile)", value: "^ipsa", market: "index" },
+const INDEX_PRESETS = [
+    { label: "Nifty 50", value: "^NSEI", market: "INDEX" },
+    { label: "Sensex", value: "^BSESN", market: "INDEX" },
+    { label: "Nifty Bank", value: "^NSEBANK", market: "INDEX" },
+    { label: "Nifty IT", value: "^CNXIT", market: "INDEX" },
+    { label: "Nifty Midcap 50", value: "^NSEMDCP50", market: "INDEX" },
+    { label: "Nifty Next 50", value: "^NSMIDCP", market: "INDEX" },
+    { label: "Nifty Auto", value: "^CNXAUTO", market: "INDEX" },
+    { label: "Nifty Pharma", value: "^CNXPHARMA", market: "INDEX" },
+    { label: "Nifty FMCG", value: "^CNXFMCG", market: "INDEX" },
+    { label: "Nifty Metal", value: "^CNXMETAL", market: "INDEX" },
+    { label: "Nifty Energy", value: "^CNXENERGY", market: "INDEX" },
+    { label: "Nifty Realty", value: "^CNXREALTY", market: "INDEX" },
+    { label: "Nifty Infra", value: "^CNXINFRA", market: "INDEX" },
+    { label: "Nifty PSU Bank", value: "^CNXPSUBANK", market: "INDEX" },
+    { label: "India VIX", value: "^INDIAVIX", market: "INDEX" },
+    { label: "S&P 500", value: "^GSPC", market: "INDEX" },
+    { label: "Nasdaq 100", value: "^NDX", market: "INDEX" },
+    { label: "Dow Jones", value: "^DJI", market: "INDEX" },
+    { label: "Russell 2000", value: "^RUT", market: "INDEX" },
+    { label: "S&P 400 Mid", value: "^MID", market: "INDEX" },
+    { label: "NYSE Composite", value: "^NYA", market: "INDEX" },
+    { label: "VIX", value: "^VIX", market: "INDEX" },
+    { label: "FTSE 100", value: "^FTSE", market: "INDEX" },
+    { label: "DAX", value: "^GDAXI", market: "INDEX" },
+    { label: "CAC 40", value: "^FCHI", market: "INDEX" },
+    { label: "Euro Stoxx 50", value: "^STOXX50E", market: "INDEX" },
+    { label: "IBEX 35", value: "^IBEX", market: "INDEX" },
+    { label: "AEX (Amsterdam)", value: "^AEX", market: "INDEX" },
+    { label: "SMI (Swiss)", value: "^SSMI", market: "INDEX" },
+    { label: "OMX (Stockholm)", value: "^OMX", market: "INDEX" },
+    { label: "ATX (Austria)", value: "^ATX", market: "INDEX" },
+    { label: "BEL 20", value: "^BFX", market: "INDEX" },
+    { label: "FTSE MIB Italy", value: "FTSEMIB.MI", market: "INDEX" },
+    { label: "Nikkei 225", value: "^N225", market: "INDEX" },
+    { label: "Topix", value: "^TOPX", market: "INDEX" },
+    { label: "Hang Seng", value: "^HSI", market: "INDEX" },
+    { label: "Shanghai", value: "000001.SS", market: "INDEX" },
+    { label: "Shenzhen", value: "399001.SZ", market: "INDEX" },
+    { label: "CSI 300", value: "000300.SS", market: "INDEX" },
+    { label: "Kospi", value: "^KS11", market: "INDEX" },
+    { label: "Kosdaq", value: "^KQ11", market: "INDEX" },
+    { label: "Taiwan TWSE", value: "^TWII", market: "INDEX" },
+    { label: "ASX 200", value: "^AXJO", market: "INDEX" },
+    { label: "Straits Times", value: "^STI", market: "INDEX" },
+    { label: "Jakarta (IDX)", value: "^JKSE", market: "INDEX" },
+    { label: "SET (Thailand)", value: "^SET.BK", market: "INDEX" },
+    { label: "KLCI (Malaysia)", value: "^KLSE", market: "INDEX" },
+    { label: "PSEi (Philippines)", value: "PSEi.PS", market: "INDEX" },
+    { label: "Tadawul (Saudi)", value: "^TASI.SR", market: "INDEX" },
+    { label: "DFM (Dubai)", value: "^DFMGI", market: "INDEX" },
+    { label: "ADX (Abu Dhabi)", value: "^FTFADGI", market: "INDEX" },
+    { label: "EGX 30 (Egypt)", value: "^CASE30", market: "INDEX" },
+    { label: "JSE (S.Africa)", value: "^J203.JO", market: "INDEX" },
+    { label: "NSE 20 (Kenya)", value: "^NSE20", market: "INDEX" },
+    { label: "TSX (Canada)", value: "^GSPTSE", market: "INDEX" },
+    { label: "Bovespa (Brazil)", value: "^BVSP", market: "INDEX" },
+    { label: "IPC (Mexico)", value: "^MXX", market: "INDEX" },
+    { label: "Merval (Argentina)", value: "^MERV", market: "INDEX" },
+    { label: "IPSA (Chile)", value: "^IPSA", market: "INDEX" },
 ];
 
-const index_groups = [
+const INDEX_GROUPS = [
     {
-        label: "india",
-        values: ["^nsei", "^bsesn", "^nsebank", "^cnxit", "^nsemdcp50",
-            "^nsmidcp", "^cnxauto", "^cnxpharma", "^cnxfmcg",
-            "^cnxmetal", "^cnxenergy", "^cnxrealty", "^cnxinfra",
-            "^cnxpsubank", "^indiavix"],
+        label: "India",
+        values: ["^NSEI", "^BSESN", "^NSEBANK", "^CNXIT", "^NSEMDCP50",
+            "^NSMIDCP", "^CNXAUTO", "^CNXPHARMA", "^CNXFMCG",
+            "^CNXMETAL", "^CNXENERGY", "^CNXREALTY", "^CNXINFRA",
+            "^CNXPSUBANK", "^INDIAVIX"],
     },
     {
-        label: "usa",
-        values: ["^gspc", "^ndx", "^dji", "^rut", "^mid", "^nya", "^vix"],
+        label: "USA",
+        values: ["^GSPC", "^NDX", "^DJI", "^RUT", "^MID", "^NYA", "^VIX"],
     },
     {
-        label: "europe",
-        values: ["^ftse", "^gdaxi", "^fchi", "^stoxx50e", "^ibex",
-            "^aex", "^ssmi", "^omx", "^atx", "^bfx", "ftsemib.mi"],
+        label: "Europe",
+        values: ["^FTSE", "^GDAXI", "^FCHI", "^STOXX50E", "^IBEX",
+            "^AEX", "^SSMI", "^OMX", "^ATX", "^BFX", "FTSEMIB.MI"],
     },
     {
-        label: "asia",
-        values: ["^n225", "^topx", "^hsi", "000001.ss", "399001.sz",
-            "000300.ss", "^ks11", "^kq11", "^twii", "^axjo",
-            "^sti", "^jkse", "^set.bk", "^klse", "psei.ps"],
+        label: "Asia",
+        values: ["^N225", "^TOPX", "^HSI", "000001.SS", "399001.SZ",
+            "000300.SS", "^KS11", "^KQ11", "^TWII", "^AXJO",
+            "^STI", "^JKSE", "^SET.BK", "^KLSE", "PSEi.PS"],
     },
     {
-        label: "middle east & africa",
-        values: ["^tasi.sr", "^dfmgi", "^ftfadgi", "^case30", "^j203.jo", "^nse20"],
+        label: "Middle East & Africa",
+        values: ["^TASI.SR", "^DFMGI", "^FTFADGI", "^CASE30", "^J203.JO", "^NSE20"],
     },
     {
-        label: "americas",
-        values: ["^gsptse", "^bvsp", "^mxx", "^merv", "^ipsa"],
+        label: "Americas",
+        values: ["^GSPTSE", "^BVSP", "^MXX", "^MERV", "^IPSA"],
     },
 ];
 
-const reference_clocks = [
-    { label: "nse", tz: "asia/kolkata", open: [9, 15], close: [15, 30], alwaysopen: false },
-    { label: "bse", tz: "asia/kolkata", open: [9, 15], close: [15, 30], alwaysopen: false },
-    { label: "nasdaq", tz: "america/new_york", open: [9, 30], close: [16, 0], alwaysopen: false },
-    { label: "nyse", tz: "america/new_york", open: [9, 30], close: [16, 0], alwaysopen: false },
-    { label: "tokyo", tz: "asia/tokyo", open: [9, 0], close: [15, 0], alwaysopen: false },
-    { label: "london", tz: "europe/london", open: [8, 0], close: [16, 30], alwaysopen: false },
-    { label: "sgx", tz: "asia/singapore", open: [9, 0], close: [17, 0], alwaysopen: false },
-    { label: "asx", tz: "australia/sydney", open: [10, 0], close: [16, 0], alwaysopen: false },
-    { label: "krx", tz: "asia/seoul", open: [9, 0], close: [15, 30], alwaysopen: false },
-    { label: "jse", tz: "africa/johannesburg", open: [9, 0], close: [17, 0], alwaysopen: false },
-    { label: "tadawul", tz: "asia/riyadh", open: [10, 0], close: [15, 0], alwaysopen: false },
-    { label: "b3", tz: "america/sao_paulo", open: [10, 0], close: [18, 0], alwaysopen: false },
-    { label: "tsx", tz: "america/toronto", open: [9, 30], close: [16, 0], alwaysopen: false },
-    { label: "fx", tz: "asia/kolkata", open: [0, 0], close: [23, 59], alwaysopen: true },
-    { label: "commodities", tz: "america/new_york", open: [18, 0], close: [17, 0], alwaysopen: true },
+const REFERENCE_CLOCKS = [
+    { label: "NSE", tz: "Asia/Kolkata", open: [9, 15], close: [15, 30], alwaysOpen: false },
+    { label: "BSE", tz: "Asia/Kolkata", open: [9, 15], close: [15, 30], alwaysOpen: false },
+    { label: "NASDAQ", tz: "America/New_York", open: [9, 30], close: [16, 0], alwaysOpen: false },
+    { label: "NYSE", tz: "America/New_York", open: [9, 30], close: [16, 0], alwaysOpen: false },
+    { label: "Tokyo", tz: "Asia/Tokyo", open: [9, 0], close: [15, 0], alwaysOpen: false },
+    { label: "London", tz: "Europe/London", open: [8, 0], close: [16, 30], alwaysOpen: false },
+    { label: "SGX", tz: "Asia/Singapore", open: [9, 0], close: [17, 0], alwaysOpen: false },
+    { label: "ASX", tz: "Australia/Sydney", open: [10, 0], close: [16, 0], alwaysOpen: false },
+    { label: "KRX", tz: "Asia/Seoul", open: [9, 0], close: [15, 30], alwaysOpen: false },
+    { label: "JSE", tz: "Africa/Johannesburg", open: [9, 0], close: [17, 0], alwaysOpen: false },
+    { label: "Tadawul", tz: "Asia/Riyadh", open: [10, 0], close: [15, 0], alwaysOpen: false },
+    { label: "B3", tz: "America/Sao_Paulo", open: [10, 0], close: [18, 0], alwaysOpen: false },
+    { label: "TSX", tz: "America/Toronto", open: [9, 30], close: [16, 0], alwaysOpen: false },
+    { label: "FX", tz: "Asia/Kolkata", open: [0, 0], close: [23, 59], alwaysOpen: true },
+    { label: "Commodities", tz: "America/New_York", open: [18, 0], close: [17, 0], alwaysOpen: true },
 ];
 
 
 
-const nifty_compare_groups = {
-    sectoral: [
-        { label: "nifty auto", ticker: "^cnxauto" },
-        { label: "nifty bank", ticker: "^nsebank" },
-        { label: "nifty it", ticker: "^cnxit" },
-        { label: "nifty pharma", ticker: "^cnxpharma" },
-        { label: "nifty fmcg", ticker: "^cnxfmcg" },
-        { label: "nifty metal", ticker: "^cnxmetal" },
-        { label: "nifty energy", ticker: "^cnxenergy" },
-        { label: "nifty realty", ticker: "^cnxrealty" },
-        { label: "nifty infra", ticker: "^cnxinfra" },
-        { label: "nifty psu bank", ticker: "^cnxpsubank" },
-        { label: "nifty media", ticker: "^cnxmedia" },
-        { label: "nifty finance", ticker: "^cnxfinance" },
+const NIFTY_COMPARE_GROUPS = {
+    Sectoral: [
+        { label: "Nifty Auto", ticker: "^CNXAUTO" },
+        { label: "Nifty Bank", ticker: "^NSEBANK" },
+        { label: "Nifty IT", ticker: "^CNXIT" },
+        { label: "Nifty Pharma", ticker: "^CNXPHARMA" },
+        { label: "Nifty FMCG", ticker: "^CNXFMCG" },
+        { label: "Nifty Metal", ticker: "^CNXMETAL" },
+        { label: "Nifty Energy", ticker: "^CNXENERGY" },
+        { label: "Nifty Realty", ticker: "^CNXREALTY" },
+        { label: "Nifty Infra", ticker: "^CNXINFRA" },
+        { label: "Nifty PSU Bank", ticker: "^CNXPSUBANK" },
+        { label: "Nifty Media", ticker: "^CNXMEDIA" },
+        { label: "Nifty Finance", ticker: "^CNXFINANCE" },
     ],
-    thematic: [
-        { label: "nifty mnc", ticker: "^cnxmnc" },
-        { label: "nifty pse", ticker: "^cnxpse" },
-        { label: "nifty cpse", ticker: "^cnxcpse" },
-        { label: "nifty services", ticker: "^cnxservice" },
-        { label: "nifty consumption", ticker: "^cnxconsumption" },
-        { label: "nifty mfg", ticker: "^cnxmfg" },
+    Thematic: [
+        { label: "Nifty MNC", ticker: "^CNXMNC" },
+        { label: "Nifty PSE", ticker: "^CNXPSE" },
+        { label: "Nifty CPSE", ticker: "^CNXCPSE" },
+        { label: "Nifty Services", ticker: "^CNXSERVICE" },
+        { label: "Nifty Consumption", ticker: "^CNXCONSUMPTION" },
+        { label: "Nifty Mfg", ticker: "^CNXMFG" },
     ],
-    "broad market": [
-        { label: "sensex", ticker: "^bsesn" },
-        { label: "nifty 100", ticker: "^cnx100" },
-        { label: "nifty 500", ticker: "^cnx500" },
-        { label: "nifty midcap 50", ticker: "^nsemdcp50" },
-        { label: "nifty next 50", ticker: "^nsmidcp" },
-        { label: "nifty smallcap", ticker: "^cnxsc" },
-        { label: "india vix", ticker: "^indiavix" },
+    "Broad Market": [
+        { label: "Sensex", ticker: "^BSESN" },
+        { label: "Nifty 100", ticker: "^CNX100" },
+        { label: "Nifty 500", ticker: "^CNX500" },
+        { label: "Nifty Midcap 50", ticker: "^NSEMDCP50" },
+        { label: "Nifty Next 50", ticker: "^NSMIDCP" },
+        { label: "Nifty Smallcap", ticker: "^CNXSC" },
+        { label: "India VIX", ticker: "^INDIAVIX" },
     ],
 };
 
-const ranges = [
-    { label: "1m", value: "1mo", interval: "1d" },
-    { label: "3m", value: "3mo", interval: "1d" },
-    { label: "6m", value: "6mo", interval: "1d" },
-    { label: "1y", value: "1y", interval: "1d" },
-    { label: "2y", value: "2y", interval: "1wk" },
-    { label: "5y", value: "5y", interval: "1wk" },
+const RANGES = [
+    { label: "1M", value: "1mo", interval: "1d" },
+    { label: "3M", value: "3mo", interval: "1d" },
+    { label: "6M", value: "6mo", interval: "1d" },
+    { label: "1Y", value: "1y", interval: "1d" },
+    { label: "2Y", value: "2y", interval: "1wk" },
+    { label: "5Y", value: "5y", interval: "1wk" },
 ];
 
 
-const option_symbols = [
-    "nifty", "banknifty", "finnifty",
-    "midcpnifty", "sensex", "bankex",
+const OPTION_SYMBOLS = [
+    "NIFTY", "BANKNIFTY", "FINNIFTY",
+    "MIDCPNIFTY", "SENSEX", "BANKEX",
 ];
 
 
-// normalize series to % change from first value
+// Normalize series to % change from first value
 function normalize(data) {
     if (!data || data.length === 0) return [];
     const base = data[0].value;
     if (!base) return [];
     return data.map(d => ({
         date: d.date,
-        value: parsefloat((((d.value - base) / base) * 100).tofixed(2)),
+        value: parseFloat((((d.value - base) / base) * 100).toFixed(2)),
     }));
 }
 
-const line_colors = [
+const LINE_COLORS = [
     "#2563eb", "#dc2626", "#16a34a", "#d97706",
     "#7c3aed", "#db2777", "#0891b2", "#65a30d",
     "#ea580c", "#6366f1", "#14b8a6", "#f43f5e",
 ];
 
-// ── market hours ─────────────────────────────────────────────────────────────
+// ── Market hours ─────────────────────────────────────────────────────────────
 
-function getlocaltime(tz) {
-    const now = new date();
-    return new date(now.tolocalestring("en-us", { timezone: tz }));
+function getLocalTime(tz) {
+    const now = new Date();
+    return new Date(now.toLocaleString("en-US", { timeZone: tz }));
 }
 
-function ismarketopenforclock(clock) {
-    if (clock.alwaysopen) return true;
-    const local = getlocaltime(clock.tz);
-    const day = local.getday();
+function isMarketOpenForClock(clock) {
+    if (clock.alwaysOpen) return true;
+    const local = getLocalTime(clock.tz);
+    const day = local.getDay();
     if (day === 0 || day === 6) return false;
-    const total = local.gethours() * 60 + local.getminutes();
-    const openmin = clock.open[0] * 60 + clock.open[1];
-    const closemin = clock.close[0] * 60 + clock.close[1];
-    return total >= openmin && total < closemin;
+    const total = local.getHours() * 60 + local.getMinutes();
+    const openMin = clock.open[0] * 60 + clock.open[1];
+    const closeMin = clock.close[0] * 60 + clock.close[1];
+    return total >= openMin && total < closeMin;
 }
 
-function secondsuntilopenforclock(clock) {
-    const local = getlocaltime(clock.tz);
-    const day = local.getday();
-    const open = new date(local);
-    open.sethours(clock.open[0], clock.open[1], 0, 0);
-    if (day === 0) open.setdate(open.getdate() + 1);
-    else if (day === 6) open.setdate(open.getdate() + 2);
-    else if (local >= open) open.setdate(open.getdate() + (day === 5 ? 3 : 1));
-    return math.max(0, math.floor((open - local) / 1000));
+function secondsUntilOpenForClock(clock) {
+    const local = getLocalTime(clock.tz);
+    const day = local.getDay();
+    const open = new Date(local);
+    open.setHours(clock.open[0], clock.open[1], 0, 0);
+    if (day === 0) open.setDate(open.getDate() + 1);
+    else if (day === 6) open.setDate(open.getDate() + 2);
+    else if (local >= open) open.setDate(open.getDate() + (day === 5 ? 3 : 1));
+    return Math.max(0, Math.floor((open - local) / 1000));
 }
 
-function secondsuntilcloseforclock(clock) {
-    const local = getlocaltime(clock.tz);
-    const close = new date(local);
-    close.sethours(clock.close[0], clock.close[1], 0, 0);
-    return math.max(0, math.floor((close - local) / 1000));
+function secondsUntilCloseForClock(clock) {
+    const local = getLocalTime(clock.tz);
+    const close = new Date(local);
+    close.setHours(clock.close[0], clock.close[1], 0, 0);
+    return Math.max(0, Math.floor((close - local) / 1000));
 }
 
-function formatseconds(secs) {
-    const h = math.floor(secs / 3600);
-    const m = math.floor((secs % 3600) / 60);
+function formatSeconds(secs) {
+    const h = Math.floor(secs / 3600);
+    const m = Math.floor((secs % 3600) / 60);
     const s = secs % 60;
     if (h > 0) return `${h}h ${m}m ${s}s`;
     if (m > 0) return `${m}m ${s}s`;
     return `${s}s`;
 }
 
-function clockformarket(marketkey) {
-    const found = reference_clocks.find(c => c.label === markets[marketkey]?.label);
+function clockForMarket(marketKey) {
+    const found = REFERENCE_CLOCKS.find(c => c.label === MARKETS[marketKey]?.label);
     if (found) return found;
-    const m = markets[marketkey] || markets.nse;
-    return { label: m.label, tz: m.tz, open: m.open, close: m.close, alwaysopen: false };
+    const m = MARKETS[marketKey] || MARKETS.NSE;
+    return { label: m.label, tz: m.tz, open: m.open, close: m.close, alwaysOpen: false };
 }
 
-// ── days held — counts all calendar days including weekends ──────────────────
-function dayssince(datestr) {
-    if (!datestr) return null;
-    const start = new date(datestr);
-    start.sethours(0, 0, 0, 0);
-    const today = new date();
-    today.sethours(0, 0, 0, 0);
+// ── Days held — counts ALL calendar days including weekends ──────────────────
+function daysSince(dateStr) {
+    if (!dateStr) return null;
+    const start = new Date(dateStr);
+    start.setHours(0, 0, 0, 0);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
     const diff = today - start;
     if (diff < 0) return null;
-    return math.floor(diff / (1000 * 60 * 60 * 24));
+    return Math.floor(diff / (1000 * 60 * 60 * 24));
 }
 
-function calcrr(buyprice, target, stoploss, side = "buy") {
-    if (!buyprice || !target || !stoploss) return null;
-    const reward = side === "buy" ? target - buyprice : buyprice - target;
-    const risk = side === "buy" ? buyprice - stoploss : stoploss - buyprice;
+function calcRR(buyPrice, target, stopLoss, side = "buy") {
+    if (!buyPrice || !target || !stopLoss) return null;
+    const reward = side === "buy" ? target - buyPrice : buyPrice - target;
+    const risk = side === "buy" ? buyPrice - stopLoss : stopLoss - buyPrice;
     if (reward <= 0 || risk <= 0) return null;
-    return (reward / risk).tofixed(2);
+    return (reward / risk).toFixed(2);
 }
 
-function fmtmoney(value, market) {
-    const m = markets[market] || markets.nse;
-    if (value === null || value === undefined || isnan(value)) return "-";
-    const decimals = market === "fx" ? 4 : 2;
-    const num = value.tolocalestring("en-in", { minimumfractiondigits: decimals, maximumfractiondigits: decimals });
-    if (market === "index") return num;
+function fmtMoney(value, market) {
+    const m = MARKETS[market] || MARKETS.NSE;
+    if (value === null || value === undefined || isNaN(value)) return "-";
+    const decimals = market === "FX" ? 4 : 2;
+    const num = value.toLocaleString("en-IN", { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+    if (market === "INDEX") return num;
     return m.symbol ? `${m.symbol}${num}` : num;
 }
 
-// ── rangebar ──────────────────────────────────────────────────────────────────
+// ── RangeBar ──────────────────────────────────────────────────────────────────
 
-function rangebar({ price, low52, high52, market }) {
+function RangeBar({ price, low52, high52, market }) {
     if (!price || !low52 || !high52 || high52 === low52) return null;
-    const pct = math.max(0, math.min(100, ((price - low52) / (high52 - low52)) * 100));
+    const pct = Math.max(0, Math.min(100, ((price - low52) / (high52 - low52)) * 100));
     return (
-        <div classname="mt-1">
-            <div classname="flex justify-between text-[10px] text-gray-400 mb-0.5">
-                <span>52w l {fmtmoney(low52, market)}</span>
-                <span>{fmtmoney(high52, market)} 52w h</span>
+        <div className="mt-1">
+            <div className="flex justify-between text-[10px] text-gray-400 mb-0.5">
+                <span>52W L {fmtMoney(low52, market)}</span>
+                <span>{fmtMoney(high52, market)} 52W H</span>
             </div>
-            <div classname="relative h-1.5 rounded-full bg-gray-100">
-                <div classname="absolute h-full rounded-full bg-gradient-to-r from-red-400 via-amber-400 to-green-400" style={{ width: "100%" }} />
-                <div classname="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-2.5 h-2.5 rounded-full bg-white border-2 border-blue-500 shadow" style={{ left: `${pct}%` }} />
+            <div className="relative h-1.5 rounded-full bg-gray-100">
+                <div className="absolute h-full rounded-full bg-gradient-to-r from-red-400 via-amber-400 to-green-400" style={{ width: "100%" }} />
+                <div className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-2.5 h-2.5 rounded-full bg-white border-2 border-blue-500 shadow" style={{ left: `${pct}%` }} />
             </div>
-            <p classname="text-[10px] text-gray-400 mt-0.5 text-right">{pct.tofixed(1)}% of range</p>
+            <p className="text-[10px] text-gray-400 mt-0.5 text-right">{pct.toFixed(1)}% of range</p>
         </div>
     );
 }
 
-// ── marketbadge ───────────────────────────────────────────────────────────────
+// ── MarketBadge ───────────────────────────────────────────────────────────────
 
-function marketbadge({ clock }) {
-    const [open, setopen] = usestate(ismarketopenforclock(clock));
-    const [countdown, setcountdown] = usestate("");
+function MarketBadge({ clock }) {
+    const [open, setOpen] = useState(isMarketOpenForClock(clock));
+    const [countdown, setCountdown] = useState("");
 
-    useeffect(() => {
+    useEffect(() => {
         const tick = () => {
-            const o = ismarketopenforclock(clock);
-            setopen(o);
-            setcountdown(o
-                ? formatseconds(secondsuntilcloseforclock(clock))
-                : formatseconds(secondsuntilopenforclock(clock))
+            const o = isMarketOpenForClock(clock);
+            setOpen(o);
+            setCountdown(o
+                ? formatSeconds(secondsUntilCloseForClock(clock))
+                : formatSeconds(secondsUntilOpenForClock(clock))
             );
         };
         tick();
-        const interval = setinterval(tick, 1000);
-        return () => clearinterval(interval);
+        const interval = setInterval(tick, 1000);
+        return () => clearInterval(interval);
     }, [clock]);
 
     return (
-        <div classname="flex flex-col items-center min-w-[110px] rounded-md border border-gray-200 bg-gray-50 px-3 py-1.5 text-center">
-            <span classname={`text-[10px] font-medium ${open ? "text-green-500" : "text-red-400"}`}>
+        <div className="flex flex-col items-center min-w-[110px] rounded-md border border-gray-200 bg-gray-50 px-3 py-1.5 text-center">
+            <span className={`text-[10px] font-medium ${open ? "text-green-500" : "text-red-400"}`}>
                 {open ? `● ${clock.label} open` : `● ${clock.label} closed`}
             </span>
-            <span classname="text-sm font-mono font-semibold text-blue-600">{countdown}</span>
-            <span classname="text-[10px] text-gray-400">{open ? "closes in" : "opens in"}</span>
+            <span className="text-sm font-mono font-semibold text-blue-600">{countdown}</span>
+            <span className="text-[10px] text-gray-400">{open ? "closes in" : "opens in"}</span>
         </div>
     );
 }
 
-// ── clockselector ─────────────────────────────────────────────────────────────
+// ── ClockSelector ─────────────────────────────────────────────────────────────
 
-function clockselector({ visible, ontoggle, total }) {
-    const [open, setopen] = usestate(false);
+function ClockSelector({ visible, onToggle, total }) {
+    const [open, setOpen] = useState(false);
 
     return (
-        <div classname="relative">
+        <div className="relative">
             <button
-                onclick={() => setopen(v => !v)}
-                classname="rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-1.5"
+                onClick={() => setOpen(v => !v)}
+                className="rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-1.5"
             >
-                clocks
-                <span classname="text-[10px] text-gray-400">
-                    ({visible.length}/{total ?? reference_clocks.length})
+                Clocks
+                <span className="text-[10px] text-gray-400">
+                    ({visible.length}/{total ?? REFERENCE_CLOCKS.length})
                 </span>
             </button>
             {open && (
                 <>
-                    <div classname="fixed inset-0 z-10" onclick={() => setopen(false)} />
-                    <div classname="absolute top-full z-20 mt-1 w-44 rounded-md border border-gray-200 bg-white shadow-lg py-1 max-h-72 overflow-y-auto">
-                        {reference_clocks.map((clock) => (
+                    <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
+                    <div className="absolute top-full z-20 mt-1 w-44 rounded-md border border-gray-200 bg-white shadow-lg py-1 max-h-72 overflow-y-auto">
+                        {REFERENCE_CLOCKS.map((clock) => (
                             <label
                                 key={clock.label}
-                                classname="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50 cursor-pointer"
+                                className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50 cursor-pointer"
                             >
                                 <input
                                     type="checkbox"
                                     checked={visible.includes(clock.label)}
-                                    onchange={() => ontoggle(clock.label)}
-                                    classname="accent-blue-500"
+                                    onChange={() => onToggle(clock.label)}
+                                    className="accent-blue-500"
                                 />
                                 {clock.label}
                             </label>
@@ -398,363 +398,363 @@ function clockselector({ visible, ontoggle, total }) {
     );
 }
 
-// ── stockcard ─────────────────────────────────────────────────────────────────
+// ── StockCard ─────────────────────────────────────────────────────────────────
 
-function stockcard({ symbol, market, target, stoploss, entrydate, notes, qty, buyprice, side, mode, onremove, onupdate, isdragging }) {
-    const [quote, setquote] = usestate(null);
-    const [shownotes, setshownotes] = usestate(false);
-    const m = markets[market] || markets.nse;
-    const istrading = mode !== "watch";
+function StockCard({ symbol, market, target, stopLoss, entryDate, notes, qty, buyPrice, side, mode, onRemove, onUpdate, isDragging }) {
+    const [quote, setQuote] = useState(null);
+    const [showNotes, setShowNotes] = useState(false);
+    const m = MARKETS[market] || MARKETS.NSE;
+    const isTrading = mode !== "watch";
 
-    useeffect(() => {
+    useEffect(() => {
         let active = true;
-        const fetchprice = async () => {
-            const ticker = (market === "commodity" || market === "index")
+        const fetchPrice = async () => {
+            const ticker = (market === "COMMODITY" || market === "INDEX")
                 ? symbol
                 : `${symbol}${m.suffix}`;
-            const data = await getquote(ticker);
-            if (active) setquote(data);
+            const data = await getQuote(ticker);
+            if (active) setQuote(data);
         };
-        fetchprice();
-        const interval = setinterval(fetchprice, refresh_interval);
-        return () => { active = false; clearinterval(interval); };
+        fetchPrice();
+        const interval = setInterval(fetchPrice, REFRESH_INTERVAL);
+        return () => { active = false; clearInterval(interval); };
     }, [symbol, market]);
 
     const price = quote?.price ?? null;
-    const daysheld = dayssince(entrydate);
-    const rr = calcrr(buyprice, target, stoploss, side);
+    const daysHeld = daysSince(entryDate);
+    const rr = calcRR(buyPrice, target, stopLoss, side);
 
     const status =
-        price === null ? "loading"
-            : !istrading ? "watching"
+        price === null ? "Loading"
+            : !isTrading ? "Watching"
                 : side === "buy"
-                    ? price >= target ? "target hit"
-                        : price <= stoploss ? "stoploss hit"
-                            : "holding"
-                    : price <= target ? "target hit"
-                        : price >= stoploss ? "stoploss hit"
-                            : "holding";
+                    ? price >= target ? "Target hit"
+                        : price <= stopLoss ? "Stoploss hit"
+                            : "Holding"
+                    : price <= target ? "Target hit"
+                        : price >= stopLoss ? "Stoploss hit"
+                            : "Holding";
 
-    const badgeclasses =
-        status === "target hit" ? "bg-green-100 text-green-700"
-            : status === "stoploss hit" ? "bg-red-100 text-red-700"
-                : status === "holding" ? "bg-amber-100 text-amber-700"
-                    : status === "watching" ? "bg-blue-100 text-blue-700"
+    const badgeClasses =
+        status === "Target hit" ? "bg-green-100 text-green-700"
+            : status === "Stoploss hit" ? "bg-red-100 text-red-700"
+                : status === "Holding" ? "bg-amber-100 text-amber-700"
+                    : status === "Watching" ? "bg-blue-100 text-blue-700"
                         : "bg-gray-100 text-gray-600";
 
-    const changecolor =
+    const changeColor =
         quote?.change > 0 ? "text-green-600"
             : quote?.change < 0 ? "text-red-600"
                 : "text-gray-500";
 
-    const rrcolor =
+    const rrColor =
         !rr ? "text-gray-400"
             : rr >= 2 ? "text-green-600"
                 : rr >= 1 ? "text-amber-600"
                     : "text-red-500";
 
-    const volchgpct = quote?.volume && quote?.prevvolume
-        ? ((quote.volume - quote.prevvolume) / quote.prevvolume * 100).tofixed(1)
+    const volChgPct = quote?.volume && quote?.prevVolume
+        ? ((quote.volume - quote.prevVolume) / quote.prevVolume * 100).toFixed(1)
         : null;
 
     return (
-        <div classname={`h-full flex flex-col gap-2 rounded-xl border bg-white p-4 shadow-sm transition-all duration-150 ${isdragging ? "border-blue-400 shadow-lg opacity-50 scale-95" : "border-gray-200"}`}>
+        <div className={`h-full flex flex-col gap-2 rounded-xl border bg-white p-4 shadow-sm transition-all duration-150 ${isDragging ? "border-blue-400 shadow-lg opacity-50 scale-95" : "border-gray-200"}`}>
 
-            {/* header */}
-            <div classname="flex items-center justify-between">
-                <div classname="flex items-center gap-2">
-                    {/* drag handle */}
-                    <span classname="text-gray-300 cursor-grab active:cursor-grabbing select-none text-base leading-none" title="drag to reorder">⠿</span>
-                    <h3 classname="text-base font-semibold text-gray-900">
-                        {market === "commodity"
-                            ? (commodity_presets.find(c => c.value === symbol)?.label ?? symbol)
-                            : market === "index"
-                                ? (index_presets.find(i => i.value === symbol)?.label ?? symbol)
+            {/* Header */}
+            <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                    {/* Drag handle */}
+                    <span className="text-gray-300 cursor-grab active:cursor-grabbing select-none text-base leading-none" title="Drag to reorder">⠿</span>
+                    <h3 className="text-base font-semibold text-gray-900">
+                        {market === "COMMODITY"
+                            ? (COMMODITY_PRESETS.find(c => c.value === symbol)?.label ?? symbol)
+                            : market === "INDEX"
+                                ? (INDEX_PRESETS.find(i => i.value === symbol)?.label ?? symbol)
                                 : symbol}
                     </h3>
-                    <span classname="text-[10px] text-gray-400 font-medium">{m.label}</span>
+                    <span className="text-[10px] text-gray-400 font-medium">{m.label}</span>
                 </div>
-                <div classname="flex items-center gap-2">
+                <div className="flex items-center gap-2">
                     <button
-                        onclick={() => onupdate("mode", istrading ? "watch" : "trade")}
-                        classname={`text-[10px] font-medium px-2 py-0.5 rounded-md border transition-colors ${istrading
+                        onClick={() => onUpdate("mode", isTrading ? "watch" : "trade")}
+                        className={`text-[10px] font-medium px-2 py-0.5 rounded-md border transition-colors ${isTrading
                             ? "border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100"
                             : "border-blue-300 bg-blue-50 text-blue-700 hover:bg-blue-100"
                             }`}
                     >
-                        {istrading ? "trading" : "watch"}
+                        {isTrading ? "Trading" : "Watch"}
                     </button>
-                    {istrading && (
-                        <button onclick={() => setshownotes(v => !v)} classname="text-xs text-gray-400 hover:text-blue-500 transition-colors">📝</button>
+                    {isTrading && (
+                        <button onClick={() => setShowNotes(v => !v)} className="text-xs text-gray-400 hover:text-blue-500 transition-colors">📝</button>
                     )}
                     <button
-                        onclick={onremove}
-                        classname="w-6 h-6 rounded-md border border-gray-300 text-gray-400 hover:text-red-600 hover:border-red-300 hover:bg-red-50 transition-colors flex items-center justify-center text-base leading-none"
+                        onClick={onRemove}
+                        className="w-6 h-6 rounded-md border border-gray-300 text-gray-400 hover:text-red-600 hover:border-red-300 hover:bg-red-50 transition-colors flex items-center justify-center text-base leading-none"
                     >×</button>
                 </div>
             </div>
 
-            {/* qty */}
-            {istrading && (
-                <div classname="flex items-center justify-between">
-                    <span classname="text-xs text-gray-400">qty</span>
-                    <div classname="flex items-center gap-1.5">
-                        <button onclick={() => onupdate("qty", math.max(1, (qty || 1) - 1))}
-                            classname="w-6 h-6 rounded-md border border-gray-300 text-gray-600 hover:bg-gray-100 text-sm font-medium flex items-center justify-center">−</button>
+            {/* Qty */}
+            {isTrading && (
+                <div className="flex items-center justify-between">
+                    <span className="text-xs text-gray-400">Qty</span>
+                    <div className="flex items-center gap-1.5">
+                        <button onClick={() => onUpdate("qty", Math.max(1, (qty || 1) - 1))}
+                            className="w-6 h-6 rounded-md border border-gray-300 text-gray-600 hover:bg-gray-100 text-sm font-medium flex items-center justify-center">−</button>
                         <input type="number" value={qty || 1} min={1}
-                            onchange={(e) => onupdate("qty", math.max(1, number(e.target.value)))}
-                            classname="w-16 text-center text-sm font-semibold text-gray-800 border border-gray-300 rounded-md py-0.5 focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                        <button onclick={() => onupdate("qty", (qty || 1) + 1)}
-                            classname="w-6 h-6 rounded-md border border-gray-300 text-gray-600 hover:bg-gray-100 text-sm font-medium flex items-center justify-center">+</button>
+                            onChange={(e) => onUpdate("qty", Math.max(1, Number(e.target.value)))}
+                            className="w-16 text-center text-sm font-semibold text-gray-800 border border-gray-300 rounded-md py-0.5 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                        <button onClick={() => onUpdate("qty", (qty || 1) + 1)}
+                            className="w-6 h-6 rounded-md border border-gray-300 text-gray-600 hover:bg-gray-100 text-sm font-medium flex items-center justify-center">+</button>
                     </div>
-                    <span classname="text-xs text-gray-400">
-                        {price !== null && qty ? fmtmoney(price * qty, market) : ""}
+                    <span className="text-xs text-gray-400">
+                        {price !== null && qty ? fmtMoney(price * qty, market) : ""}
                     </span>
                 </div>
             )}
 
-            {/* buy / sell */}
-            {istrading && (
-                <div classname="flex items-center justify-between">
-                    <span classname="text-xs text-gray-400">direction</span>
-                    <div classname="flex rounded-md overflow-hidden border border-gray-300 text-xs font-medium">
-                        <button onclick={() => onupdate("side", "buy")}
-                            classname={`px-3 py-1 transition-colors ${side === "buy" ? "bg-green-500 text-white" : "bg-white text-gray-500 hover:bg-gray-50"}`}>buy</button>
-                        <button onclick={() => onupdate("side", "sell")}
-                            classname={`px-3 py-1 transition-colors ${side === "sell" ? "bg-red-500 text-white" : "bg-white text-gray-500 hover:bg-gray-50"}`}>sell</button>
+            {/* Buy / Sell */}
+            {isTrading && (
+                <div className="flex items-center justify-between">
+                    <span className="text-xs text-gray-400">Direction</span>
+                    <div className="flex rounded-md overflow-hidden border border-gray-300 text-xs font-medium">
+                        <button onClick={() => onUpdate("side", "buy")}
+                            className={`px-3 py-1 transition-colors ${side === "buy" ? "bg-green-500 text-white" : "bg-white text-gray-500 hover:bg-gray-50"}`}>Buy</button>
+                        <button onClick={() => onUpdate("side", "sell")}
+                            className={`px-3 py-1 transition-colors ${side === "sell" ? "bg-red-500 text-white" : "bg-white text-gray-500 hover:bg-gray-50"}`}>Sell</button>
                     </div>
                 </div>
             )}
 
-            {/* price */}
-            <p classname="text-2xl font-semibold text-gray-900">
-                {price !== null ? fmtmoney(price, market) : "..."}
+            {/* Price */}
+            <p className="text-2xl font-semibold text-gray-900">
+                {price !== null ? fmtMoney(price, market) : "..."}
             </p>
 
-            {/* change */}
+            {/* Change */}
             {quote?.change !== undefined && quote?.change !== null && (
-                <p classname={`text-sm font-medium ${changecolor}`}>
-                    {quote.change >= 0 ? "+" : ""}{quote.change.tofixed(2)} ({quote.changepercent?.tofixed(2)}%)
+                <p className={`text-sm font-medium ${changeColor}`}>
+                    {quote.change >= 0 ? "+" : ""}{quote.change.toFixed(2)} ({quote.changePercent?.toFixed(2)}%)
                 </p>
             )}
 
-            {/* status badge */}
-            <span classname={`self-start rounded-md px-2.5 py-1 text-xs font-medium ${badgeclasses}`}>{status}</span>
+            {/* Status badge */}
+            <span className={`self-start rounded-md px-2.5 py-1 text-xs font-medium ${badgeClasses}`}>{status}</span>
 
-            {/* 52w range */}
-            {quote?.low52week && quote?.high52week && (
-                <rangebar price={price} low52={quote.low52week} high52={quote.high52week} market={market} />
+            {/* 52W range */}
+            {quote?.low52Week && quote?.high52Week && (
+                <RangeBar price={price} low52={quote.low52Week} high52={quote.high52Week} market={market} />
             )}
 
-            {/* stats grid */}
-            {istrading && (
-                <div classname="grid grid-cols-3 gap-1 mt-1 text-center">
-                    <div classname="rounded-lg bg-gray-50 px-2 py-1.5">
-                        <p classname="text-[10px] text-gray-400">volume</p>
-                        <p classname="text-xs font-semibold text-gray-700">
-                            {quote?.volume ? (quote.volume / 1_00_000).tofixed(1) + "l" : "-"}
+            {/* Stats grid */}
+            {isTrading && (
+                <div className="grid grid-cols-3 gap-1 mt-1 text-center">
+                    <div className="rounded-lg bg-gray-50 px-2 py-1.5">
+                        <p className="text-[10px] text-gray-400">Volume</p>
+                        <p className="text-xs font-semibold text-gray-700">
+                            {quote?.volume ? (quote.volume / 1_00_000).toFixed(1) + "L" : "-"}
                         </p>
                     </div>
-                    <div classname="rounded-lg bg-gray-50 px-2 py-1.5">
-                        <p classname="text-[10px] text-gray-400">prev vol</p>
-                        <p classname="text-xs font-semibold text-gray-700">
-                            {quote?.prevvolume ? (quote.prevvolume / 1_00_000).tofixed(1) + "l" : "-"}
+                    <div className="rounded-lg bg-gray-50 px-2 py-1.5">
+                        <p className="text-[10px] text-gray-400">Prev Vol</p>
+                        <p className="text-xs font-semibold text-gray-700">
+                            {quote?.prevVolume ? (quote.prevVolume / 1_00_000).toFixed(1) + "L" : "-"}
                         </p>
                     </div>
-                    <div classname="rounded-lg bg-gray-50 px-2 py-1.5">
-                        <p classname="text-[10px] text-gray-400">vol chg</p>
-                        <p classname={`text-xs font-semibold ${volchgpct === null ? "text-gray-400" : number(volchgpct) > 0 ? "text-blue-600" : "text-red-500"}`}>
-                            {volchgpct !== null ? `${volchgpct}%` : "-"}
+                    <div className="rounded-lg bg-gray-50 px-2 py-1.5">
+                        <p className="text-[10px] text-gray-400">Vol chg</p>
+                        <p className={`text-xs font-semibold ${volChgPct === null ? "text-gray-400" : Number(volChgPct) > 0 ? "text-blue-600" : "text-red-500"}`}>
+                            {volChgPct !== null ? `${volChgPct}%` : "-"}
                         </p>
                     </div>
-                    <div classname="rounded-lg bg-gray-50 px-2 py-1.5">
-                        <p classname="text-[10px] text-gray-400">days held</p>
-                        <p classname="text-xs font-semibold text-gray-700">
-                            {daysheld !== null ? `${daysheld}d` : "-"}
+                    <div className="rounded-lg bg-gray-50 px-2 py-1.5">
+                        <p className="text-[10px] text-gray-400">Days held</p>
+                        <p className="text-xs font-semibold text-gray-700">
+                            {daysHeld !== null ? `${daysHeld}d` : "-"}
                         </p>
                     </div>
-                    <div classname="col-span-2 rounded-lg bg-gray-50 px-2 py-1.5">
-                        <p classname="text-[10px] text-gray-400">r : r</p>
-                        <p classname={`text-xs font-semibold ${rrcolor}`}>{rr ? `1 : ${rr}` : "-"}</p>
+                    <div className="col-span-2 rounded-lg bg-gray-50 px-2 py-1.5">
+                        <p className="text-[10px] text-gray-400">R : R</p>
+                        <p className={`text-xs font-semibold ${rrColor}`}>{rr ? `1 : ${rr}` : "-"}</p>
                     </div>
                 </div>
             )}
 
-            {/* inputs */}
-            {istrading && (
-                <div classname="mt-1 flex flex-col gap-1.5">
-                    <label classname="flex items-center justify-between text-sm text-gray-600">
-                        <span>target ({price !== null ? (target - price).tofixed(2) : "-"})</span>
-                        <input type="number" value={target} onchange={(e) => onupdate("target", e.target.value)}
-                            classname="w-24 rounded-md border border-gray-300 px-2 py-1 text-sm text-right focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            {/* Inputs */}
+            {isTrading && (
+                <div className="mt-1 flex flex-col gap-1.5">
+                    <label className="flex items-center justify-between text-sm text-gray-600">
+                        <span>Target ({price !== null ? (target - price).toFixed(2) : "-"})</span>
+                        <input type="number" value={target} onChange={(e) => onUpdate("target", e.target.value)}
+                            className="w-24 rounded-md border border-gray-300 px-2 py-1 text-sm text-right focus:outline-none focus:ring-2 focus:ring-blue-500" />
                     </label>
-                    <label classname="flex items-center justify-between text-sm text-gray-600">
-                        <span>stop loss ({price !== null ? (price - stoploss).tofixed(2) : "-"})</span>
-                        <input type="number" value={stoploss} onchange={(e) => onupdate("stoploss", e.target.value)}
-                            classname="w-24 rounded-md border border-gray-300 px-2 py-1 text-sm text-right focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    <label className="flex items-center justify-between text-sm text-gray-600">
+                        <span>Stop Loss ({price !== null ? (price - stopLoss).toFixed(2) : "-"})</span>
+                        <input type="number" value={stopLoss} onChange={(e) => onUpdate("stopLoss", e.target.value)}
+                            className="w-24 rounded-md border border-gray-300 px-2 py-1 text-sm text-right focus:outline-none focus:ring-2 focus:ring-blue-500" />
                     </label>
-                    <label classname="flex items-center justify-between text-sm text-gray-600">
-                        <span>entry date</span>
-                        <input type="date" value={entrydate || ""} onchange={(e) => onupdate("entrydate", e.target.value)}
-                            classname="w-36 rounded-md border border-gray-300 px-2 py-1 text-sm text-right focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    <label className="flex items-center justify-between text-sm text-gray-600">
+                        <span>Entry date</span>
+                        <input type="date" value={entryDate || ""} onChange={(e) => onUpdate("entryDate", e.target.value)}
+                            className="w-36 rounded-md border border-gray-300 px-2 py-1 text-sm text-right focus:outline-none focus:ring-2 focus:ring-blue-500" />
                     </label>
-                    <label classname="flex items-center justify-between text-sm text-gray-600">
-                        <span>buy price</span>
-                        <input type="number" value={buyprice || ""} onchange={(e) => onupdate("buyprice", e.target.value)}
-                            classname="w-24 rounded-md border border-gray-300 px-2 py-1 text-sm text-right focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    <label className="flex items-center justify-between text-sm text-gray-600">
+                        <span>Buy Price</span>
+                        <input type="number" value={buyPrice || ""} onChange={(e) => onUpdate("buyPrice", e.target.value)}
+                            className="w-24 rounded-md border border-gray-300 px-2 py-1 text-sm text-right focus:outline-none focus:ring-2 focus:ring-blue-500"
                             placeholder="0" />
                     </label>
                 </div>
             )}
 
-            {/* p&l */}
-            {istrading && buyprice > 0 && price !== null && qty > 0 && (() => {
-                const pnl = side === "buy" ? (price - buyprice) * qty : (buyprice - price) * qty;
-                const pnlpct = side === "buy" ? ((price - buyprice) / buyprice) * 100 : ((buyprice - price) / buyprice) * 100;
-                const isprofit = pnl >= 0;
+            {/* P&L */}
+            {isTrading && buyPrice > 0 && price !== null && qty > 0 && (() => {
+                const pnl = side === "buy" ? (price - buyPrice) * qty : (buyPrice - price) * qty;
+                const pnlPct = side === "buy" ? ((price - buyPrice) / buyPrice) * 100 : ((buyPrice - price) / buyPrice) * 100;
+                const isProfit = pnl >= 0;
                 return (
-                    <div classname={`rounded-lg px-3 py-2 ${isprofit ? "bg-green-50 border border-green-100" : "bg-red-50 border border-red-100"}`}>
-                        <div classname="flex items-center justify-between">
-                            <span classname="text-[10px] text-gray-400">p&l ({daysheld !== null ? `${daysheld}d` : "0d"})</span>
-                            <span classname={`text-[10px] font-medium ${isprofit ? "text-green-600" : "text-red-500"}`}>{pnlpct.tofixed(2)}%</span>
+                    <div className={`rounded-lg px-3 py-2 ${isProfit ? "bg-green-50 border border-green-100" : "bg-red-50 border border-red-100"}`}>
+                        <div className="flex items-center justify-between">
+                            <span className="text-[10px] text-gray-400">P&L ({daysHeld !== null ? `${daysHeld}d` : "0d"})</span>
+                            <span className={`text-[10px] font-medium ${isProfit ? "text-green-600" : "text-red-500"}`}>{pnlPct.toFixed(2)}%</span>
                         </div>
-                        <p classname={`text-base font-semibold ${isprofit ? "text-green-600" : "text-red-500"}`}>
-                            {isprofit ? "+" : ""}{fmtmoney(pnl, market)}
+                        <p className={`text-base font-semibold ${isProfit ? "text-green-600" : "text-red-500"}`}>
+                            {isProfit ? "+" : ""}{fmtMoney(pnl, market)}
                         </p>
-                        <div classname="flex justify-between text-[10px] text-gray-400 mt-0.5">
-                            <span>buy {fmtmoney(buyprice, market)}</span>
-                            <span>now {fmtmoney(price, market)}</span>
+                        <div className="flex justify-between text-[10px] text-gray-400 mt-0.5">
+                            <span>Buy {fmtMoney(buyPrice, market)}</span>
+                            <span>Now {fmtMoney(price, market)}</span>
                         </div>
                     </div>
                 );
             })()}
 
-            {/* notes */}
-            {istrading && shownotes && (
-                <textarea value={notes || ""} onchange={(e) => onupdate("notes", e.target.value)}
-                    placeholder="trade thesis, setup, key levels..." rows={3}
-                    classname="mt-1 w-full rounded-md border border-gray-300 px-2 py-1.5 text-xs text-gray-700 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            {/* Notes */}
+            {isTrading && showNotes && (
+                <textarea value={notes || ""} onChange={(e) => onUpdate("notes", e.target.value)}
+                    placeholder="Trade thesis, setup, key levels..." rows={3}
+                    className="mt-1 w-full rounded-md border border-gray-300 px-2 py-1.5 text-xs text-gray-700 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500" />
             )}
         </div>
     );
 }
 
-// ── responsive columns ────────────────────────────────────────────────────────
+// ── Responsive columns ────────────────────────────────────────────────────────
 
-function useresponsivecolumns(desktopcolumns = 4) {
-    const [columns, setcolumns] = usestate(desktopcolumns);
-    useeffect(() => {
+function useResponsiveColumns(desktopColumns = 4) {
+    const [columns, setColumns] = useState(desktopColumns);
+    useEffect(() => {
         const compute = () => {
-            const w = window.innerwidth;
+            const w = window.innerWidth;
             if (w < 640) return 1;
             if (w < 1024) return 2;
-            return desktopcolumns;
+            return desktopColumns;
         };
-        const onresize = () => setcolumns(compute());
-        onresize();
-        window.addeventlistener("resize", onresize);
-        return () => window.removeeventlistener("resize", onresize);
-    }, [desktopcolumns]);
+        const onResize = () => setColumns(compute());
+        onResize();
+        window.addEventListener("resize", onResize);
+        return () => window.removeEventListener("resize", onResize);
+    }, [desktopColumns]);
     return columns;
 }
 
-// -- compare chart --------------------------------------------------------
+// -- Compare Chart --------------------------------------------------------
 
-function comparechart({ onclose }) {
-    const [activegroup, setactivegroup] = usestate("sectoral");
-    const [selected, setselected] = usestate([]);       // array of ticker strings
-    const [range, setrange] = usestate(ranges[3]);      // default 1y
-    const [seriesdata, setseriesdata] = usestate({});   // { ticker: [{date,value}] }
-    const [loading, setloading] = usestate({});         // { ticker: bool }
-    const [basedata, setbasedata] = usestate([]);       // nifty 50 data
-    const [baseloading, setbaseloading] = usestate(true);
-    const [tooltip, settooltip] = usestate(null);
+function CompareChart({ onClose }) {
+    const [activeGroup, setActiveGroup] = useState("Sectoral");
+    const [selected, setSelected] = useState([]);       // array of ticker strings
+    const [range, setRange] = useState(RANGES[3]);      // default 1Y
+    const [seriesData, setSeriesData] = useState({});   // { ticker: [{date,value}] }
+    const [loading, setLoading] = useState({});         // { ticker: bool }
+    const [baseData, setBaseData] = useState([]);       // Nifty 50 data
+    const [baseLoading, setBaseLoading] = useState(true);
+    const [tooltip, setTooltip] = useState(null);
 
-    const base_ticker = "^nsei";
-    const base_label = "nifty 50";
+    const BASE_TICKER = "^NSEI";
+    const BASE_LABEL = "Nifty 50";
 
-    // load base (nifty 50) on mount or range change
-    useeffect(() => {
-        setbaseloading(true);
-        gethistory(base_ticker, range.value, range.interval).then(data => {
-            setbasedata(normalize(data));
-            setbaseloading(false);
+    // Load base (Nifty 50) on mount or range change
+    useEffect(() => {
+        setBaseLoading(true);
+        getHistory(BASE_TICKER, range.value, range.interval).then(data => {
+            setBaseData(normalize(data));
+            setBaseLoading(false);
         });
-        // reload all selected on range change
-        selected.foreach(ticker => loadseries(ticker));
+        // Reload all selected on range change
+        selected.forEach(ticker => loadSeries(ticker));
     }, [range]);
 
-    const loadseries = async (ticker) => {
-        setloading(prev => ({ ...prev, [ticker]: true }));
-        const data = await gethistory(ticker, range.value, range.interval);
-        setseriesdata(prev => ({ ...prev, [ticker]: normalize(data) }));
-        setloading(prev => ({ ...prev, [ticker]: false }));
+    const loadSeries = async (ticker) => {
+        setLoading(prev => ({ ...prev, [ticker]: true }));
+        const data = await getHistory(ticker, range.value, range.interval);
+        setSeriesData(prev => ({ ...prev, [ticker]: normalize(data) }));
+        setLoading(prev => ({ ...prev, [ticker]: false }));
     };
 
-    const toggleseries = (ticker) => {
+    const toggleSeries = (ticker) => {
         if (selected.includes(ticker)) {
-            setselected(prev => prev.filter(t => t !== ticker));
+            setSelected(prev => prev.filter(t => t !== ticker));
         } else {
-            setselected(prev => [...prev, ticker]);
-            if (!seriesdata[ticker]) loadseries(ticker);
+            setSelected(prev => [...prev, ticker]);
+            if (!seriesData[ticker]) loadSeries(ticker);
         }
     };
 
-    // merge all series into one array keyed by date
-    const mergeddata = usememo(() => {
-        const datemap = {};
-        // add base
-        basedata.foreach(d => {
-            datemap[d.date] = { date: d.date, [base_ticker]: d.value };
+    // Merge all series into one array keyed by date
+    const mergedData = useMemo(() => {
+        const dateMap = {};
+        // Add base
+        baseData.forEach(d => {
+            dateMap[d.date] = { date: d.date, [BASE_TICKER]: d.value };
         });
-        // add selected
-        selected.foreach(ticker => {
-            (seriesdata[ticker] ?? []).foreach(d => {
-                if (!datemap[d.date]) datemap[d.date] = { date: d.date };
-                datemap[d.date][ticker] = d.value;
+        // Add selected
+        selected.forEach(ticker => {
+            (seriesData[ticker] ?? []).forEach(d => {
+                if (!dateMap[d.date]) dateMap[d.date] = { date: d.date };
+                dateMap[d.date][ticker] = d.value;
             });
         });
-        return object.values(datemap).sort((a, b) => a.date.localecompare(b.date));
-    }, [basedata, seriesdata, selected]);
+        return Object.values(dateMap).sort((a, b) => a.date.localeCompare(b.date));
+    }, [baseData, seriesData, selected]);
 
-    // get label for ticker
-    const getlabel = (ticker) => {
-        if (ticker === base_ticker) return base_label;
-        for (const group of object.values(nifty_compare_groups)) {
+    // Get label for ticker
+    const getLabel = (ticker) => {
+        if (ticker === BASE_TICKER) return BASE_LABEL;
+        for (const group of Object.values(NIFTY_COMPARE_GROUPS)) {
             const found = group.find(i => i.ticker === ticker);
             if (found) return found.label;
         }
         return ticker;
     };
 
-    // all lines to draw
-    const alllines = [base_ticker, ...selected];
+    // All lines to draw
+    const allLines = [BASE_TICKER, ...selected];
 
-    // last values for legend
-    const lastrow = mergeddata[mergeddata.length - 1] ?? {};
+    // Last values for legend
+    const lastRow = mergedData[mergedData.length - 1] ?? {};
 
     return (
-        <div classname="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-            <div classname="rounded-2xl shadow-2xl flex flex-col bg-white border border-gray-200 w-[96vw] h-[92vh] overflow-hidden">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+            <div className="rounded-2xl shadow-2xl flex flex-col bg-white border border-gray-200 w-[96vw] h-[92vh] overflow-hidden">
 
-                {/* header */}
-                <div classname="flex items-center justify-between px-4 py-2.5 border-b border-gray-200">
-                    <div classname="flex items-center gap-3">
-                        <span classname="font-bold text-gray-900">📊 nifty 50 — compare chart</span>
+                {/* Header */}
+                <div className="flex items-center justify-between px-4 py-2.5 border-b border-gray-200">
+                    <div className="flex items-center gap-3">
+                        <span className="font-bold text-gray-900">📊 Nifty 50 — Compare Chart</span>
                         {selected.length > 0 && (
-                            <span classname="text-xs bg-blue-500 text-white px-2 py-0.5 rounded-full">
+                            <span className="text-xs bg-blue-500 text-white px-2 py-0.5 rounded-full">
                                 +{selected.length} indices
                             </span>
                         )}
                     </div>
-                    <div classname="flex items-center gap-2">
-                        {/* range selector */}
-                        <div classname="flex rounded-md overflow-hidden border border-gray-300 text-xs font-medium">
-                            {ranges.map(r => (
+                    <div className="flex items-center gap-2">
+                        {/* Range selector */}
+                        <div className="flex rounded-md overflow-hidden border border-gray-300 text-xs font-medium">
+                            {RANGES.map(r => (
                                 <button
                                     key={r.value}
-                                    onclick={() => setrange(r)}
-                                    classname={`px-2.5 py-1.5 transition-colors ${range.value === r.value
+                                    onClick={() => setRange(r)}
+                                    className={`px-2.5 py-1.5 transition-colors ${range.value === r.value
                                         ? "bg-blue-500 text-white"
                                         : "bg-white text-gray-600 hover:bg-gray-50"
                                         }`}
@@ -765,83 +765,83 @@ function comparechart({ onclose }) {
                         </div>
                         {selected.length > 0 && (
                             <button
-                                onclick={() => setselected([])}
-                                classname="text-xs px-3 py-1.5 rounded-md border border-red-300 bg-red-50 text-red-600 hover:bg-red-100"
+                                onClick={() => setSelected([])}
+                                className="text-xs px-3 py-1.5 rounded-md border border-red-300 bg-red-50 text-red-600 hover:bg-red-100"
                             >
-                                clear all
+                                Clear all
                             </button>
                         )}
                         <button
-                            onclick={onclose}
-                            classname="w-7 h-7 rounded-md border border-gray-300 text-gray-400 hover:text-red-500 flex items-center justify-center text-lg"
+                            onClick={onClose}
+                            className="w-7 h-7 rounded-md border border-gray-300 text-gray-400 hover:text-red-500 flex items-center justify-center text-lg"
                         >×</button>
                     </div>
                 </div>
 
-                <div classname="flex flex-1 overflow-hidden">
+                <div className="flex flex-1 overflow-hidden">
 
-                    {/* sidebar */}
-                    <div classname="w-52 flex flex-col border-r border-gray-200 bg-gray-50 overflow-hidden">
+                    {/* Sidebar */}
+                    <div className="w-52 flex flex-col border-r border-gray-200 bg-gray-50 overflow-hidden">
 
-                        {/* base badge */}
-                        <div classname="px-3 py-2 border-b border-gray-200">
-                            <p classname="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1">base index</p>
-                            <div classname="flex items-center gap-2 px-2 py-1.5 rounded-md bg-blue-50 border border-blue-200">
-                                <span classname="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: line_colors[0] }} />
-                                <span classname="text-xs font-semibold text-blue-700">nifty 50</span>
-                                {lastrow[base_ticker] !== undefined && (
-                                    <span classname={`ml-auto text-[11px] font-bold ${lastrow[base_ticker] >= 0 ? "text-green-600" : "text-red-500"}`}>
-                                        {lastrow[base_ticker] >= 0 ? "+" : ""}{lastrow[base_ticker]}%
+                        {/* Base badge */}
+                        <div className="px-3 py-2 border-b border-gray-200">
+                            <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1">Base Index</p>
+                            <div className="flex items-center gap-2 px-2 py-1.5 rounded-md bg-blue-50 border border-blue-200">
+                                <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: LINE_COLORS[0] }} />
+                                <span className="text-xs font-semibold text-blue-700">Nifty 50</span>
+                                {lastRow[BASE_TICKER] !== undefined && (
+                                    <span className={`ml-auto text-[11px] font-bold ${lastRow[BASE_TICKER] >= 0 ? "text-green-600" : "text-red-500"}`}>
+                                        {lastRow[BASE_TICKER] >= 0 ? "+" : ""}{lastRow[BASE_TICKER]}%
                                     </span>
                                 )}
                             </div>
                         </div>
 
-                        {/* group tabs */}
-                        <div classname="flex border-b border-gray-200">
-                            {object.keys(nifty_compare_groups).map(g => (
+                        {/* Group tabs */}
+                        <div className="flex border-b border-gray-200">
+                            {Object.keys(NIFTY_COMPARE_GROUPS).map(g => (
                                 <button
                                     key={g}
-                                    onclick={() => setactivegroup(g)}
-                                    classname={`flex-1 py-1.5 text-[9px] font-semibold transition-colors ${activegroup === g
+                                    onClick={() => setActiveGroup(g)}
+                                    className={`flex-1 py-1.5 text-[9px] font-semibold transition-colors ${activeGroup === g
                                         ? "border-b-2 border-blue-500 text-blue-600"
                                         : "text-gray-400 hover:text-gray-600"
                                         }`}
                                 >
-                                    {g === "broad market" ? "broad" : g}
+                                    {g === "Broad Market" ? "Broad" : g}
                                 </button>
                             ))}
                         </div>
 
-                        {/* index list */}
-                        <div classname="flex-1 overflow-y-auto py-1">
-                            {nifty_compare_groups[activegroup].map((item, i) => {
-                                const isselected = selected.includes(item.ticker);
-                                const coloridx = selected.indexof(item.ticker) + 1;
-                                const color = isselected ? line_colors[coloridx % line_colors.length] : undefined;
-                                const pct = isselected && lastrow[item.ticker] !== undefined
-                                    ? lastrow[item.ticker]
+                        {/* Index list */}
+                        <div className="flex-1 overflow-y-auto py-1">
+                            {NIFTY_COMPARE_GROUPS[activeGroup].map((item, i) => {
+                                const isSelected = selected.includes(item.ticker);
+                                const colorIdx = selected.indexOf(item.ticker) + 1;
+                                const color = isSelected ? LINE_COLORS[colorIdx % LINE_COLORS.length] : undefined;
+                                const pct = isSelected && lastRow[item.ticker] !== undefined
+                                    ? lastRow[item.ticker]
                                     : null;
 
                                 return (
                                     <button
                                         key={item.ticker}
-                                        onclick={() => toggleseries(item.ticker)}
-                                        classname={`w-full flex items-center gap-2 px-3 py-1.5 text-left text-xs transition-colors ${isselected
+                                        onClick={() => toggleSeries(item.ticker)}
+                                        className={`w-full flex items-center gap-2 px-3 py-1.5 text-left text-xs transition-colors ${isSelected
                                             ? "bg-blue-50 text-blue-700"
                                             : "text-gray-600 hover:bg-gray-100"
                                             }`}
                                     >
-                                        <span classname="w-3 h-3 rounded flex-shrink-0 border flex items-center justify-center text-[9px]"
-                                            style={isselected ? { background: color, bordercolor: color, color: "#fff" } : { bordercolor: "#d1d5db" }}>
-                                            {isselected ? "✓" : ""}
+                                        <span className="w-3 h-3 rounded flex-shrink-0 border flex items-center justify-center text-[9px]"
+                                            style={isSelected ? { background: color, borderColor: color, color: "#fff" } : { borderColor: "#d1d5db" }}>
+                                            {isSelected ? "✓" : ""}
                                         </span>
-                                        <span classname="flex-1 truncate">{item.label}</span>
+                                        <span className="flex-1 truncate">{item.label}</span>
                                         {loading[item.ticker] && (
-                                            <span classname="text-[9px] text-gray-400">...</span>
+                                            <span className="text-[9px] text-gray-400">...</span>
                                         )}
                                         {pct !== null && !loading[item.ticker] && (
-                                            <span classname={`text-[10px] font-bold ${pct >= 0 ? "text-green-600" : "text-red-500"}`}>
+                                            <span className={`text-[10px] font-bold ${pct >= 0 ? "text-green-600" : "text-red-500"}`}>
                                                 {pct >= 0 ? "+" : ""}{pct}%
                                             </span>
                                         )}
@@ -850,57 +850,57 @@ function comparechart({ onclose }) {
                             })}
                         </div>
 
-                        {/* selected summary */}
+                        {/* Selected summary */}
                         {selected.length > 0 && (
-                            <div classname="border-t border-gray-200 px-3 py-2">
-                                <p classname="text-[10px] font-semibold text-gray-400 uppercase mb-1">selected ({selected.length})</p>
+                            <div className="border-t border-gray-200 px-3 py-2">
+                                <p className="text-[10px] font-semibold text-gray-400 uppercase mb-1">Selected ({selected.length})</p>
                                 {selected.map((ticker, i) => (
-                                    <div key={ticker} classname="flex items-center gap-1.5 py-0.5">
-                                        <span classname="w-2 h-2 rounded-full flex-shrink-0"
-                                            style={{ background: line_colors[(i + 1) % line_colors.length] }} />
-                                        <span classname="text-[11px] text-gray-600 truncate flex-1">{getlabel(ticker)}</span>
-                                        <button onclick={() => toggleseries(ticker)}
-                                            classname="text-gray-300 hover:text-red-500 text-sm">×</button>
+                                    <div key={ticker} className="flex items-center gap-1.5 py-0.5">
+                                        <span className="w-2 h-2 rounded-full flex-shrink-0"
+                                            style={{ background: LINE_COLORS[(i + 1) % LINE_COLORS.length] }} />
+                                        <span className="text-[11px] text-gray-600 truncate flex-1">{getLabel(ticker)}</span>
+                                        <button onClick={() => toggleSeries(ticker)}
+                                            className="text-gray-300 hover:text-red-500 text-sm">×</button>
                                     </div>
                                 ))}
                             </div>
                         )}
                     </div>
 
-                    {/* chart area */}
-                    <div classname="flex-1 flex flex-col overflow-hidden p-3">
+                    {/* Chart area */}
+                    <div className="flex-1 flex flex-col overflow-hidden p-3">
 
-                        {baseloading ? (
-                            <div classname="flex-1 flex items-center justify-center text-sm text-gray-400">
-                                loading nifty 50 data...
+                        {baseLoading ? (
+                            <div className="flex-1 flex items-center justify-center text-sm text-gray-400">
+                                Loading Nifty 50 data...
                             </div>
                         ) : (
                             <>
-                                {/* legend */}
-                                <div classname="flex flex-wrap gap-3 mb-2 px-1">
-                                    {alllines.map((ticker, i) => {
-                                        const pct = lastrow[ticker];
+                                {/* Legend */}
+                                <div className="flex flex-wrap gap-3 mb-2 px-1">
+                                    {allLines.map((ticker, i) => {
+                                        const pct = lastRow[ticker];
                                         return (
-                                            <div key={ticker} classname="flex items-center gap-1.5">
-                                                <span classname="w-5 h-0.5 rounded-full inline-block" style={{ background: line_colors[i % line_colors.length] }} />
-                                                <span classname="text-xs text-gray-600">{getlabel(ticker)}</span>
+                                            <div key={ticker} className="flex items-center gap-1.5">
+                                                <span className="w-5 h-0.5 rounded-full inline-block" style={{ background: LINE_COLORS[i % LINE_COLORS.length] }} />
+                                                <span className="text-xs text-gray-600">{getLabel(ticker)}</span>
                                                 {pct !== undefined && (
-                                                    <span classname={`text-xs font-bold ${pct >= 0 ? "text-green-600" : "text-red-500"}`}>
+                                                    <span className={`text-xs font-bold ${pct >= 0 ? "text-green-600" : "text-red-500"}`}>
                                                         ({pct >= 0 ? "+" : ""}{pct}%)
                                                     </span>
                                                 )}
                                             </div>
                                         );
                                     })}
-                                    <span classname="text-[10px] text-gray-400 ml-auto self-center">% change from start — all indices normalized</span>
+                                    <span className="text-[10px] text-gray-400 ml-auto self-center">% change from start — all indices normalized</span>
                                 </div>
 
-                                {/* custom svg chart */}
-                                <customlinechart
-                                    data={mergeddata}
-                                    lines={alllines}
-                                    colors={line_colors}
-                                    getlabel={getlabel}
+                                {/* Custom SVG chart */}
+                                <CustomLineChart
+                                    data={mergedData}
+                                    lines={allLines}
+                                    colors={LINE_COLORS}
+                                    getLabel={getLabel}
                                 />
                             </>
                         )}
@@ -911,160 +911,160 @@ function comparechart({ onclose }) {
     );
 }
 
-// ── custom svg line chart ─────────────────────────────────────────────────────
+// ── Custom SVG Line Chart ─────────────────────────────────────────────────────
 
-function customlinechart({ data, lines, colors, getlabel }) {
-    const svgref = useref(null);
-    const [hoveredx, sethoveredx] = usestate(null);
-    const [tooltipdata, settooltipdata] = usestate(null);
+function CustomLineChart({ data, lines, colors, getLabel }) {
+    const svgRef = useRef(null);
+    const [hoveredX, setHoveredX] = useState(null);
+    const [tooltipData, setTooltipData] = useState(null);
 
-    const w = 900, h = 400;
-    const pad = { top: 20, right: 20, bottom: 40, left: 60 };
-    const chartw = w - pad.left - pad.right;
-    const charth = h - pad.top - pad.bottom;
+    const W = 900, H = 400;
+    const PAD = { top: 20, right: 20, bottom: 40, left: 60 };
+    const chartW = W - PAD.left - PAD.right;
+    const chartH = H - PAD.top - PAD.bottom;
 
-    const allvalues = data.flatmap(d => lines.map(l => d[l]).filter(v => v !== undefined && v !== null));
-    const minv = math.min(...allvalues, 0);
-    const maxv = math.max(...allvalues, 0);
-    const rangev = maxv - minv || 1;
+    const allValues = data.flatMap(d => lines.map(l => d[l]).filter(v => v !== undefined && v !== null));
+    const minV = Math.min(...allValues, 0);
+    const maxV = Math.max(...allValues, 0);
+    const rangeV = maxV - minV || 1;
 
-    const xscale = (i) => pad.left + (i / math.max(data.length - 1, 1)) * chartw;
-    const yscale = (v) => pad.top + charth - ((v - minv) / rangev) * charth;
+    const xScale = (i) => PAD.left + (i / Math.max(data.length - 1, 1)) * chartW;
+    const yScale = (v) => PAD.top + chartH - ((v - minV) / rangeV) * chartH;
 
-    // y axis ticks
-    const yticks = [];
-    const tickcount = 6;
-    for (let i = 0; i <= tickcount; i++) {
-        const v = minv + (rangev / tickcount) * i;
-        yticks.push(parsefloat(v.tofixed(1)));
+    // Y axis ticks
+    const yTicks = [];
+    const tickCount = 6;
+    for (let i = 0; i <= tickCount; i++) {
+        const v = minV + (rangeV / tickCount) * i;
+        yTicks.push(parseFloat(v.toFixed(1)));
     }
 
-    // x axis ticks — show ~6 dates
-    const xtickidxs = [];
-    const step = math.floor(data.length / 5);
-    for (let i = 0; i < data.length; i += step) xtickidxs.push(i);
-    if (xtickidxs[xtickidxs.length - 1] !== data.length - 1) xtickidxs.push(data.length - 1);
+    // X axis ticks — show ~6 dates
+    const xTickIdxs = [];
+    const step = Math.floor(data.length / 5);
+    for (let i = 0; i < data.length; i += step) xTickIdxs.push(i);
+    if (xTickIdxs[xTickIdxs.length - 1] !== data.length - 1) xTickIdxs.push(data.length - 1);
 
-    // build svg path for each line
-    const buildpath = (ticker) => {
+    // Build SVG path for each line
+    const buildPath = (ticker) => {
         let d = "";
-        data.foreach((row, i) => {
+        data.forEach((row, i) => {
             const v = row[ticker];
             if (v === undefined || v === null) return;
-            const x = xscale(i);
-            const y = yscale(v);
-            d += d === "" ? `m ${x} ${y}` : ` l ${x} ${y}`;
+            const x = xScale(i);
+            const y = yScale(v);
+            d += d === "" ? `M ${x} ${y}` : ` L ${x} ${y}`;
         });
         return d;
     };
 
-    // mouse move handler
-    const handlemousemove = (e) => {
-        const svg = svgref.current;
+    // Mouse move handler
+    const handleMouseMove = (e) => {
+        const svg = svgRef.current;
         if (!svg) return;
-        const rect = svg.getboundingclientrect();
-        const mx = (e.clientx - rect.left) * (w / rect.width);
-        const relx = mx - pad.left;
-        const idx = math.round((relx / chartw) * (data.length - 1));
-        const clamped = math.max(0, math.min(data.length - 1, idx));
-        sethoveredx(clamped);
-        settooltipdata(data[clamped]);
+        const rect = svg.getBoundingClientRect();
+        const mx = (e.clientX - rect.left) * (W / rect.width);
+        const relX = mx - PAD.left;
+        const idx = Math.round((relX / chartW) * (data.length - 1));
+        const clamped = Math.max(0, Math.min(data.length - 1, idx));
+        setHoveredX(clamped);
+        setTooltipData(data[clamped]);
     };
 
-    const hx = hoveredx !== null ? xscale(hoveredx) : null;
+    const hx = hoveredX !== null ? xScale(hoveredX) : null;
 
     return (
-        <div classname="flex-1 relative" style={{ minheight: 0 }}>
+        <div className="flex-1 relative" style={{ minHeight: 0 }}>
             <svg
-                ref={svgref}
-                viewbox={`0 0 ${w} ${h}`}
-                classname="w-full h-full"
-                onmousemove={handlemousemove}
-                onmouseleave={() => { sethoveredx(null); settooltipdata(null); }}
+                ref={svgRef}
+                viewBox={`0 0 ${W} ${H}`}
+                className="w-full h-full"
+                onMouseMove={handleMouseMove}
+                onMouseLeave={() => { setHoveredX(null); setTooltipData(null); }}
             >
-                {/* grid lines */}
-                {yticks.map(v => (
+                {/* Grid lines */}
+                {yTicks.map(v => (
                     <line key={v}
-                        x1={pad.left} y1={yscale(v)}
-                        x2={w - pad.right} y2={yscale(v)}
-                        stroke="#e5e7eb" strokewidth="0.5" />
+                        x1={PAD.left} y1={yScale(v)}
+                        x2={W - PAD.right} y2={yScale(v)}
+                        stroke="#e5e7eb" strokeWidth="0.5" />
                 ))}
 
-                {/* zero line */}
-                {minv < 0 && maxv > 0 && (
+                {/* Zero line */}
+                {minV < 0 && maxV > 0 && (
                     <line
-                        x1={pad.left} y1={yscale(0)}
-                        x2={w - pad.right} y2={yscale(0)}
-                        stroke="#9ca3af" strokewidth="1" strokedasharray="4 3" />
+                        x1={PAD.left} y1={yScale(0)}
+                        x2={W - PAD.right} y2={yScale(0)}
+                        stroke="#9ca3af" strokeWidth="1" strokeDasharray="4 3" />
                 )}
 
-                {/* y axis labels */}
-                {yticks.map(v => (
+                {/* Y axis labels */}
+                {yTicks.map(v => (
                     <text key={v}
-                        x={pad.left - 6} y={yscale(v) + 4}
-                        textanchor="end" fontsize="10" fill="#9ca3af">
+                        x={PAD.left - 6} y={yScale(v) + 4}
+                        textAnchor="end" fontSize="10" fill="#9ca3af">
                         {v >= 0 ? "+" : ""}{v}%
                     </text>
                 ))}
 
-                {/* x axis labels */}
-                {xtickidxs.map(i => (
+                {/* X axis labels */}
+                {xTickIdxs.map(i => (
                     <text key={i}
-                        x={xscale(i)} y={h - 6}
-                        textanchor="middle" fontsize="10" fill="#9ca3af">
+                        x={xScale(i)} y={H - 6}
+                        textAnchor="middle" fontSize="10" fill="#9ca3af">
                         {data[i]?.date?.slice(5)}
                     </text>
                 ))}
 
-                {/* lines */}
+                {/* Lines */}
                 {lines.map((ticker, i) => (
                     <path key={ticker}
-                        d={buildpath(ticker)}
+                        d={buildPath(ticker)}
                         fill="none"
                         stroke={colors[i % colors.length]}
-                        strokewidth={ticker === "^nsei" ? 2.5 : 1.5}
-                        strokelinejoin="round"
-                        strokelinecap="round"
-                        opacity={hoveredx !== null ? (tooltipdata?.[ticker] !== undefined ? 1 : 0.3) : 1}
+                        strokeWidth={ticker === "^NSEI" ? 2.5 : 1.5}
+                        strokeLinejoin="round"
+                        strokeLinecap="round"
+                        opacity={hoveredX !== null ? (tooltipData?.[ticker] !== undefined ? 1 : 0.3) : 1}
                     />
                 ))}
 
-                {/* hover crosshair */}
+                {/* Hover crosshair */}
                 {hx !== null && (
                     <>
-                        <line x1={hx} y1={pad.top} x2={hx} y2={h - pad.bottom}
-                            stroke="#6b7280" strokewidth="1" strokedasharray="3 3" />
+                        <line x1={hx} y1={PAD.top} x2={hx} y2={H - PAD.bottom}
+                            stroke="#6b7280" strokeWidth="1" strokeDasharray="3 3" />
                         {lines.map((ticker, i) => {
-                            const v = tooltipdata?.[ticker];
+                            const v = tooltipData?.[ticker];
                             if (v === undefined || v === null) return null;
                             return (
                                 <circle key={ticker}
-                                    cx={hx} cy={yscale(v)} r="4"
+                                    cx={hx} cy={yScale(v)} r="4"
                                     fill={colors[i % colors.length]}
-                                    stroke="#fff" strokewidth="1.5" />
+                                    stroke="#fff" strokeWidth="1.5" />
                             );
                         })}
                     </>
                 )}
             </svg>
 
-            {/* tooltip */}
-            {tooltipdata && hoveredx !== null && (
-                <div classname="absolute top-2 right-2 bg-white border border-gray-200 rounded-lg shadow-lg px-3 py-2 text-xs min-w-[160px]">
-                    <p classname="font-semibold text-gray-700 mb-1.5 border-b border-gray-100 pb-1">
-                        {tooltipdata.date}
+            {/* Tooltip */}
+            {tooltipData && hoveredX !== null && (
+                <div className="absolute top-2 right-2 bg-white border border-gray-200 rounded-lg shadow-lg px-3 py-2 text-xs min-w-[160px]">
+                    <p className="font-semibold text-gray-700 mb-1.5 border-b border-gray-100 pb-1">
+                        {tooltipData.date}
                     </p>
                     {lines.map((ticker, i) => {
-                        const v = tooltipdata[ticker];
+                        const v = tooltipData[ticker];
                         if (v === undefined || v === null) return null;
                         return (
-                            <div key={ticker} classname="flex items-center justify-between gap-3 py-0.5">
-                                <div classname="flex items-center gap-1.5">
-                                    <span classname="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                            <div key={ticker} className="flex items-center justify-between gap-3 py-0.5">
+                                <div className="flex items-center gap-1.5">
+                                    <span className="w-2.5 h-2.5 rounded-full flex-shrink-0"
                                         style={{ background: colors[i % colors.length] }} />
-                                    <span classname="text-gray-600 truncate max-w-[90px]">{getlabel(ticker)}</span>
+                                    <span className="text-gray-600 truncate max-w-[90px]">{getLabel(ticker)}</span>
                                 </div>
-                                <span classname={`font-bold ${v >= 0 ? "text-green-600" : "text-red-500"}`}>
+                                <span className={`font-bold ${v >= 0 ? "text-green-600" : "text-red-500"}`}>
                                     {v >= 0 ? "+" : ""}{v}%
                                 </span>
                             </div>
@@ -1077,28 +1077,28 @@ function customlinechart({ data, lines, colors, getlabel }) {
 }
 
 
-// ---- option chain ------------------------------------------------------------
+// ---- Option Chain ------------------------------------------------------------
 
-function optionchain({ onclose }) {
-    const [symbol, setsymbol] = usestate("nifty");
-    const [expiry, setexpiry] = usestate("");
-    const [data, setdata] = usestate(null);
-    const [loading, setloading] = usestate(false);
-    const [error, seterror] = usestate(null);
-    const [spotprice, setspotprice] = usestate(null);
-    const [filter, setfilter] = usestate(10); // show ±10 strikes from atm
-    const [expirytimestamps, setexpirytimestamps] = usestate([]);
+function OptionChain({ onClose }) {
+    const [symbol, setSymbol] = useState("NIFTY");
+    const [expiry, setExpiry] = useState("");
+    const [data, setData] = useState(null);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null);
+    const [spotPrice, setSpotPrice] = useState(null);
+    const [filter, setFilter] = useState(10); // show ±10 strikes from ATM
+    const [expiryTimestamps, setExpiryTimestamps] = useState([]);
 
-    const fetchdata = async (sym, selectedexpiry = "") => {
-        setloading(true);
-        seterror(null);
+    const fetchData = async (sym, selectedExpiry = "") => {
+        setLoading(true);
+        setError(null);
         try {
-            // find timestamp for selected expiry
-            const ts = expirytimestamps.find((t) => {
-                const label = new date(t * 1000).tolocaledatestring("en-in", {
+            // Find timestamp for selected expiry
+            const ts = expiryTimestamps.find((t) => {
+                const label = new Date(t * 1000).toLocaleDateString("en-IN", {
                     day: "2-digit", month: "short", year: "numeric"
                 });
-                return label === selectedexpiry;
+                return label === selectedExpiry;
             });
 
             const url = `/api/options?symbol=${sym}${ts ? `&date=${ts}` : ""}`;
@@ -1106,231 +1106,231 @@ function optionchain({ onclose }) {
             const json = await res.json();
 
             if (json.error) {
-                seterror(json.message ?? "failed to fetch option chain.");
-                setloading(false);
+                setError(json.message ?? "Failed to fetch option chain.");
+                setLoading(false);
                 return;
             }
 
             const records = json?.records;
-            setspotprice(records?.underlyingvalue ?? null);
-            setexpirytimestamps(records?.expirationtimestamps ?? []);
+            setSpotPrice(records?.underlyingValue ?? null);
+            setExpiryTimestamps(records?.expirationTimestamps ?? []);
 
-            const expiries = records?.expirydates ?? [];
-            const activeexp = selectedexpiry || expiries[0] || "";
-            setexpiry(activeexp);
-            setdata(json);
+            const expiries = records?.expiryDates ?? [];
+            const activeExp = selectedExpiry || expiries[0] || "";
+            setExpiry(activeExp);
+            setData(json);
         } catch (e) {
-            seterror("network error: " + e.message);
+            setError("Network error: " + e.message);
         }
-        setloading(false);
+        setLoading(false);
     };
 
-    // initial load
-    useeffect(() => { fetchdata(symbol); }, [symbol]);
+    // Initial load
+    useEffect(() => { fetchData(symbol); }, [symbol]);
 
-    // filter data for selected expiry
-    const rows = usememo(() => {
+    // Filter data for selected expiry
+    const rows = useMemo(() => {
         if (!data || !expiry) return [];
         const records = data?.records?.data ?? [];
-        return records.filter(r => r.expirydate === expiry);
+        return records.filter(r => r.expiryDate === expiry);
     }, [data, expiry]);
 
-    // find atm strike
-    const atm = usememo(() => {
-        if (!spotprice || !rows.length) return null;
+    // Find ATM strike
+    const atm = useMemo(() => {
+        if (!spotPrice || !rows.length) return null;
         return rows.reduce((prev, curr) =>
-            math.abs(curr.strikeprice - spotprice) < math.abs(prev.strikeprice - spotprice) ? curr : prev
-        ).strikeprice;
-    }, [rows, spotprice]);
+            Math.abs(curr.strikePrice - spotPrice) < Math.abs(prev.strikePrice - spotPrice) ? curr : prev
+        ).strikePrice;
+    }, [rows, spotPrice]);
 
-    // filter rows around atm
-    const filteredrows = usememo(() => {
+    // Filter rows around ATM
+    const filteredRows = useMemo(() => {
         if (!atm) return rows;
-        const strikes = [...new set(rows.map(r => r.strikeprice))].sort((a, b) => a - b);
-        const atmidx = strikes.indexof(atm);
-        const visible = strikes.slice(math.max(0, atmidx - filter), atmidx + filter + 1);
-        return rows.filter(r => visible.includes(r.strikeprice));
+        const strikes = [...new Set(rows.map(r => r.strikePrice))].sort((a, b) => a - b);
+        const atmIdx = strikes.indexOf(atm);
+        const visible = strikes.slice(Math.max(0, atmIdx - filter), atmIdx + filter + 1);
+        return rows.filter(r => visible.includes(r.strikePrice));
     }, [rows, atm, filter]);
 
-    const expiries = data?.records?.expirydates ?? [];
+    const expiries = data?.records?.expiryDates ?? [];
 
-    // max oi for bar scaling
-    const maxceoi = math.max(...filteredrows.map(r => r.ce?.openinterest ?? 0), 1);
-    const maxpeoi = math.max(...filteredrows.map(r => r.pe?.openinterest ?? 0), 1);
+    // Max OI for bar scaling
+    const maxCEOI = Math.max(...filteredRows.map(r => r.CE?.openInterest ?? 0), 1);
+    const maxPEOI = Math.max(...filteredRows.map(r => r.PE?.openInterest ?? 0), 1);
 
-    const fmt = (n) => n == null ? "-" : n >= 1e7 ? (n / 1e7).tofixed(2) + "cr" : n >= 1e5 ? (n / 1e5).tofixed(1) + "l" : n.tolocalestring("en-in");
-    const fmtchg = (n) => n == null ? "-" : (n >= 0 ? "+" : "") + n.tofixed(2);
+    const fmt = (n) => n == null ? "-" : n >= 1e7 ? (n / 1e7).toFixed(2) + "Cr" : n >= 1e5 ? (n / 1e5).toFixed(1) + "L" : n.toLocaleString("en-IN");
+    const fmtChg = (n) => n == null ? "-" : (n >= 0 ? "+" : "") + n.toFixed(2);
 
     return (
-        <div classname="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-            <div classname="rounded-2xl shadow-2xl flex flex-col bg-white border border-gray-200 w-[98vw] h-[94vh] overflow-hidden">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+            <div className="rounded-2xl shadow-2xl flex flex-col bg-white border border-gray-200 w-[98vw] h-[94vh] overflow-hidden">
 
-                {/* header */}
-                <div classname="flex items-center justify-between px-4 py-2.5 border-b border-gray-200 flex-shrink-0">
-                    <div classname="flex items-center gap-3 flex-wrap">
-                        <span classname="font-bold text-gray-900">📋 option chain</span>
+                {/* Header */}
+                <div className="flex items-center justify-between px-4 py-2.5 border-b border-gray-200 flex-shrink-0">
+                    <div className="flex items-center gap-3 flex-wrap">
+                        <span className="font-bold text-gray-900">📋 Option Chain</span>
 
-                        {/* symbol selector */}
-                        <div classname="flex rounded-md overflow-hidden border border-gray-300 text-xs font-medium">
-                            {option_symbols.map(s => (
-                                <button key={s} onclick={() => setsymbol(s)}
-                                    classname={`px-2.5 py-1.5 transition-colors ${symbol === s ? "bg-blue-500 text-white" : "bg-white text-gray-600 hover:bg-gray-50"}`}>
+                        {/* Symbol selector */}
+                        <div className="flex rounded-md overflow-hidden border border-gray-300 text-xs font-medium">
+                            {OPTION_SYMBOLS.map(s => (
+                                <button key={s} onClick={() => setSymbol(s)}
+                                    className={`px-2.5 py-1.5 transition-colors ${symbol === s ? "bg-blue-500 text-white" : "bg-white text-gray-600 hover:bg-gray-50"}`}>
                                     {s}
                                 </button>
                             ))}
                         </div>
 
-                        {/* expiry selector */}
+                        {/* Expiry selector */}
                         {expiries.length > 0 && (
                             <select
                                 value={expiry}
-                                onchange={e => fetchdata(symbol, e.target.value)}
-                                classname="rounded-md border border-gray-300 px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                onChange={e => fetchData(symbol, e.target.value)}
+                                className="rounded-md border border-gray-300 px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500"
                             >
                                 {expiries.map(e => <option key={e} value={e}>{e}</option>)}
                             </select>
                         )}
 
-                        {/* strike filter */}
-                        <div classname="flex items-center gap-1.5 text-xs text-gray-500">
+                        {/* Strike filter */}
+                        <div className="flex items-center gap-1.5 text-xs text-gray-500">
                             <span>±</span>
-                            <select value={filter} onchange={e => setfilter(number(e.target.value))}
-                                classname="rounded-md border border-gray-300 px-2 py-1 text-xs focus:outline-none">
+                            <select value={filter} onChange={e => setFilter(Number(e.target.value))}
+                                className="rounded-md border border-gray-300 px-2 py-1 text-xs focus:outline-none">
                                 {[5, 10, 15, 20, 30].map(n => <option key={n} value={n}>{n} strikes</option>)}
                             </select>
                         </div>
 
-                        {/* spot price */}
-                        {spotprice && (
-                            <span classname="text-sm font-bold text-gray-700">
-                                spot: <span classname="text-blue-600">₹{spotprice.tolocalestring("en-in", { minimumfractiondigits: 2 })}</span>
+                        {/* Spot price */}
+                        {spotPrice && (
+                            <span className="text-sm font-bold text-gray-700">
+                                Spot: <span className="text-blue-600">₹{spotPrice.toLocaleString("en-IN", { minimumFractionDigits: 2 })}</span>
                             </span>
                         )}
 
                         <button
-                            onclick={() => fetchdata(symbol, expiry)}
-                            classname="px-3 py-1.5 rounded-md border border-gray-300 text-xs text-gray-600 hover:bg-gray-50"
+                            onClick={() => fetchData(symbol, expiry)}
+                            className="px-3 py-1.5 rounded-md border border-gray-300 text-xs text-gray-600 hover:bg-gray-50"
                         >
-                            🔄 refresh
+                            🔄 Refresh
                         </button>
                     </div>
 
-                    <button onclick={onclose}
-                        classname="w-7 h-7 rounded-md border border-gray-300 text-gray-400 hover:text-red-500 flex items-center justify-center text-lg flex-shrink-0">
+                    <button onClick={onClose}
+                        className="w-7 h-7 rounded-md border border-gray-300 text-gray-400 hover:text-red-500 flex items-center justify-center text-lg flex-shrink-0">
                         ×
                     </button>
                 </div>
 
-                {/* table */}
-                <div classname="flex-1 overflow-auto">
+                {/* Table */}
+                <div className="flex-1 overflow-auto">
                     {loading && (
-                        <div classname="flex items-center justify-center h-full text-sm text-gray-400">
-                            loading option chain...
+                        <div className="flex items-center justify-center h-full text-sm text-gray-400">
+                            Loading option chain...
                         </div>
                     )}
                     {error && (
-                        <div classname="flex items-center justify-center h-full text-sm text-red-500">
+                        <div className="flex items-center justify-center h-full text-sm text-red-500">
                             {error}
                         </div>
                     )}
-                    {!loading && !error && filteredrows.length > 0 && (
-                        <table classname="w-full text-xs border-collapse">
-                            <thead classname="sticky top-0 z-10">
+                    {!loading && !error && filteredRows.length > 0 && (
+                        <table className="w-full text-xs border-collapse">
+                            <thead className="sticky top-0 z-10">
                                 <tr>
-                                    {/* ce headers */}
-                                    <th classname="bg-green-50 text-green-700 px-2 py-2 text-right font-semibold border-b border-green-100">oi</th>
-                                    <th classname="bg-green-50 text-green-700 px-2 py-2 text-right font-semibold border-b border-green-100">chg oi</th>
-                                    <th classname="bg-green-50 text-green-700 px-2 py-2 text-right font-semibold border-b border-green-100">volume</th>
-                                    <th classname="bg-green-50 text-green-700 px-2 py-2 text-right font-semibold border-b border-green-100">iv</th>
-                                    <th classname="bg-green-50 text-green-700 px-2 py-2 text-right font-semibold border-b border-green-100">ltp</th>
-                                    <th classname="bg-green-50 text-green-700 px-2 py-2 text-right font-semibold border-b border-green-100">chg</th>
-                                    <th classname="bg-green-50 text-green-700 px-2 py-2 text-right font-semibold border-b border-green-100">bid</th>
-                                    <th classname="bg-green-50 text-green-700 px-2 py-2 text-center font-bold border-b border-green-100 text-green-800">calls</th>
-                                    {/* strike */}
-                                    <th classname="bg-gray-800 text-white px-3 py-2 text-center font-bold border-b border-gray-700 min-w-[80px]">strike</th>
-                                    {/* pe headers */}
-                                    <th classname="bg-red-50 text-red-700 px-2 py-2 text-center font-bold border-b border-red-100 text-red-800">puts</th>
-                                    <th classname="bg-red-50 text-red-700 px-2 py-2 text-left font-semibold border-b border-red-100">ask</th>
-                                    <th classname="bg-red-50 text-red-700 px-2 py-2 text-left font-semibold border-b border-red-100">chg</th>
-                                    <th classname="bg-red-50 text-red-700 px-2 py-2 text-left font-semibold border-b border-red-100">ltp</th>
-                                    <th classname="bg-red-50 text-red-700 px-2 py-2 text-left font-semibold border-b border-red-100">iv</th>
-                                    <th classname="bg-red-50 text-red-700 px-2 py-2 text-left font-semibold border-b border-red-100">volume</th>
-                                    <th classname="bg-red-50 text-red-700 px-2 py-2 text-left font-semibold border-b border-red-100">chg oi</th>
-                                    <th classname="bg-red-50 text-red-700 px-2 py-2 text-left font-semibold border-b border-red-100">oi</th>
+                                    {/* CE headers */}
+                                    <th className="bg-green-50 text-green-700 px-2 py-2 text-right font-semibold border-b border-green-100">OI</th>
+                                    <th className="bg-green-50 text-green-700 px-2 py-2 text-right font-semibold border-b border-green-100">Chg OI</th>
+                                    <th className="bg-green-50 text-green-700 px-2 py-2 text-right font-semibold border-b border-green-100">Volume</th>
+                                    <th className="bg-green-50 text-green-700 px-2 py-2 text-right font-semibold border-b border-green-100">IV</th>
+                                    <th className="bg-green-50 text-green-700 px-2 py-2 text-right font-semibold border-b border-green-100">LTP</th>
+                                    <th className="bg-green-50 text-green-700 px-2 py-2 text-right font-semibold border-b border-green-100">Chg</th>
+                                    <th className="bg-green-50 text-green-700 px-2 py-2 text-right font-semibold border-b border-green-100">Bid</th>
+                                    <th className="bg-green-50 text-green-700 px-2 py-2 text-center font-bold border-b border-green-100 text-green-800">CALLS</th>
+                                    {/* Strike */}
+                                    <th className="bg-gray-800 text-white px-3 py-2 text-center font-bold border-b border-gray-700 min-w-[80px]">STRIKE</th>
+                                    {/* PE headers */}
+                                    <th className="bg-red-50 text-red-700 px-2 py-2 text-center font-bold border-b border-red-100 text-red-800">PUTS</th>
+                                    <th className="bg-red-50 text-red-700 px-2 py-2 text-left font-semibold border-b border-red-100">Ask</th>
+                                    <th className="bg-red-50 text-red-700 px-2 py-2 text-left font-semibold border-b border-red-100">Chg</th>
+                                    <th className="bg-red-50 text-red-700 px-2 py-2 text-left font-semibold border-b border-red-100">LTP</th>
+                                    <th className="bg-red-50 text-red-700 px-2 py-2 text-left font-semibold border-b border-red-100">IV</th>
+                                    <th className="bg-red-50 text-red-700 px-2 py-2 text-left font-semibold border-b border-red-100">Volume</th>
+                                    <th className="bg-red-50 text-red-700 px-2 py-2 text-left font-semibold border-b border-red-100">Chg OI</th>
+                                    <th className="bg-red-50 text-red-700 px-2 py-2 text-left font-semibold border-b border-red-100">OI</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {filteredrows.map((row) => {
-                                    const ce = row.ce;
-                                    const pe = row.pe;
-                                    const strike = row.strikeprice;
-                                    const isatm = strike === atm;
-                                    const isitm_ce = spotprice && strike < spotprice;
-                                    const isitm_pe = spotprice && strike > spotprice;
+                                {filteredRows.map((row) => {
+                                    const ce = row.CE;
+                                    const pe = row.PE;
+                                    const strike = row.strikePrice;
+                                    const isATM = strike === atm;
+                                    const isITM_CE = spotPrice && strike < spotPrice;
+                                    const isITM_PE = spotPrice && strike > spotPrice;
 
-                                    const ceoipct = ce ? (ce.openinterest / maxceoi) * 100 : 0;
-                                    const peoipct = pe ? (pe.openinterest / maxpeoi) * 100 : 0;
+                                    const ceOIPct = ce ? (ce.openInterest / maxCEOI) * 100 : 0;
+                                    const peOIPct = pe ? (pe.openInterest / maxPEOI) * 100 : 0;
 
                                     return (
                                         <tr key={strike}
-                                            classname={`border-b transition-colors ${isatm
+                                            className={`border-b transition-colors ${isATM
                                                 ? "bg-yellow-50 border-yellow-200"
                                                 : "border-gray-100 hover:bg-gray-50"
                                                 }`}>
-                                            {/* ce side */}
-                                            <td classname={`px-2 py-1.5 text-right relative ${isitm_ce ? "bg-green-50" : ""}`}>
-                                                <div classname="absolute inset-y-0 right-0 bg-green-200 opacity-30 rounded-l"
-                                                    style={{ width: `${ceoipct}%` }} />
-                                                <span classname="relative font-medium text-gray-700">{fmt(ce?.openinterest)}</span>
+                                            {/* CE side */}
+                                            <td className={`px-2 py-1.5 text-right relative ${isITM_CE ? "bg-green-50" : ""}`}>
+                                                <div className="absolute inset-y-0 right-0 bg-green-200 opacity-30 rounded-l"
+                                                    style={{ width: `${ceOIPct}%` }} />
+                                                <span className="relative font-medium text-gray-700">{fmt(ce?.openInterest)}</span>
                                             </td>
-                                            <td classname={`px-2 py-1.5 text-right ${isitm_ce ? "bg-green-50" : ""}`}>
-                                                <span classname={ce?.changeinopeninterest > 0 ? "text-green-600" : ce?.changeinopeninterest < 0 ? "text-red-500" : "text-gray-500"}>
-                                                    {fmt(ce?.changeinopeninterest)}
+                                            <td className={`px-2 py-1.5 text-right ${isITM_CE ? "bg-green-50" : ""}`}>
+                                                <span className={ce?.changeinOpenInterest > 0 ? "text-green-600" : ce?.changeinOpenInterest < 0 ? "text-red-500" : "text-gray-500"}>
+                                                    {fmt(ce?.changeinOpenInterest)}
                                                 </span>
                                             </td>
-                                            <td classname={`px-2 py-1.5 text-right text-gray-600 ${isitm_ce ? "bg-green-50" : ""}`}>{fmt(ce?.totaltradedvolume)}</td>
-                                            <td classname={`px-2 py-1.5 text-right text-gray-600 ${isitm_ce ? "bg-green-50" : ""}`}>{ce?.impliedvolatility?.tofixed(1) ?? "-"}</td>
-                                            <td classname={`px-2 py-1.5 text-right font-semibold ${isitm_ce ? "bg-green-50" : ""}`}>
-                                                {ce?.lastprice?.tofixed(2) ?? "-"}
+                                            <td className={`px-2 py-1.5 text-right text-gray-600 ${isITM_CE ? "bg-green-50" : ""}`}>{fmt(ce?.totalTradedVolume)}</td>
+                                            <td className={`px-2 py-1.5 text-right text-gray-600 ${isITM_CE ? "bg-green-50" : ""}`}>{ce?.impliedVolatility?.toFixed(1) ?? "-"}</td>
+                                            <td className={`px-2 py-1.5 text-right font-semibold ${isITM_CE ? "bg-green-50" : ""}`}>
+                                                {ce?.lastPrice?.toFixed(2) ?? "-"}
                                             </td>
-                                            <td classname={`px-2 py-1.5 text-right ${isitm_ce ? "bg-green-50" : ""}`}>
-                                                <span classname={ce?.change > 0 ? "text-green-600" : ce?.change < 0 ? "text-red-500" : "text-gray-500"}>
-                                                    {fmtchg(ce?.change)}
+                                            <td className={`px-2 py-1.5 text-right ${isITM_CE ? "bg-green-50" : ""}`}>
+                                                <span className={ce?.change > 0 ? "text-green-600" : ce?.change < 0 ? "text-red-500" : "text-gray-500"}>
+                                                    {fmtChg(ce?.change)}
                                                 </span>
                                             </td>
-                                            <td classname={`px-2 py-1.5 text-right text-gray-500 ${isitm_ce ? "bg-green-50" : ""}`}>{ce?.bidprice?.tofixed(2) ?? "-"}</td>
-                                            <td classname={`px-2 py-1.5 ${isitm_ce ? "bg-green-50" : ""}`} /> {/* spacer */}
+                                            <td className={`px-2 py-1.5 text-right text-gray-500 ${isITM_CE ? "bg-green-50" : ""}`}>{ce?.bidprice?.toFixed(2) ?? "-"}</td>
+                                            <td className={`px-2 py-1.5 ${isITM_CE ? "bg-green-50" : ""}`} /> {/* spacer */}
 
-                                            {/* strike */}
-                                            <td classname={`px-3 py-1.5 text-center font-bold text-sm ${isatm
+                                            {/* Strike */}
+                                            <td className={`px-3 py-1.5 text-center font-bold text-sm ${isATM
                                                 ? "bg-yellow-400 text-yellow-900"
                                                 : "bg-gray-800 text-white"
                                                 }`}>
-                                                {strike.tolocalestring("en-in")}
+                                                {strike.toLocaleString("en-IN")}
                                             </td>
 
-                                            {/* pe side */}
-                                            <td classname={`px-2 py-1.5 ${isitm_pe ? "bg-red-50" : ""}`} /> {/* spacer */}
-                                            <td classname={`px-2 py-1.5 text-left text-gray-500 ${isitm_pe ? "bg-red-50" : ""}`}>{pe?.askprice?.tofixed(2) ?? "-"}</td>
-                                            <td classname={`px-2 py-1.5 text-left ${isitm_pe ? "bg-red-50" : ""}`}>
-                                                <span classname={pe?.change > 0 ? "text-green-600" : pe?.change < 0 ? "text-red-500" : "text-gray-500"}>
-                                                    {fmtchg(pe?.change)}
+                                            {/* PE side */}
+                                            <td className={`px-2 py-1.5 ${isITM_PE ? "bg-red-50" : ""}`} /> {/* spacer */}
+                                            <td className={`px-2 py-1.5 text-left text-gray-500 ${isITM_PE ? "bg-red-50" : ""}`}>{pe?.askPrice?.toFixed(2) ?? "-"}</td>
+                                            <td className={`px-2 py-1.5 text-left ${isITM_PE ? "bg-red-50" : ""}`}>
+                                                <span className={pe?.change > 0 ? "text-green-600" : pe?.change < 0 ? "text-red-500" : "text-gray-500"}>
+                                                    {fmtChg(pe?.change)}
                                                 </span>
                                             </td>
-                                            <td classname={`px-2 py-1.5 text-left font-semibold ${isitm_pe ? "bg-red-50" : ""}`}>
-                                                {pe?.lastprice?.tofixed(2) ?? "-"}
+                                            <td className={`px-2 py-1.5 text-left font-semibold ${isITM_PE ? "bg-red-50" : ""}`}>
+                                                {pe?.lastPrice?.toFixed(2) ?? "-"}
                                             </td>
-                                            <td classname={`px-2 py-1.5 text-left text-gray-600 ${isitm_pe ? "bg-red-50" : ""}`}>{pe?.impliedvolatility?.tofixed(1) ?? "-"}</td>
-                                            <td classname={`px-2 py-1.5 text-left text-gray-600 ${isitm_pe ? "bg-red-50" : ""}`}>{fmt(pe?.totaltradedvolume)}</td>
-                                            <td classname={`px-2 py-1.5 text-left ${isitm_pe ? "bg-red-50" : ""}`}>
-                                                <span classname={pe?.changeinopeninterest > 0 ? "text-green-600" : pe?.changeinopeninterest < 0 ? "text-red-500" : "text-gray-500"}>
-                                                    {fmt(pe?.changeinopeninterest)}
+                                            <td className={`px-2 py-1.5 text-left text-gray-600 ${isITM_PE ? "bg-red-50" : ""}`}>{pe?.impliedVolatility?.toFixed(1) ?? "-"}</td>
+                                            <td className={`px-2 py-1.5 text-left text-gray-600 ${isITM_PE ? "bg-red-50" : ""}`}>{fmt(pe?.totalTradedVolume)}</td>
+                                            <td className={`px-2 py-1.5 text-left ${isITM_PE ? "bg-red-50" : ""}`}>
+                                                <span className={pe?.changeinOpenInterest > 0 ? "text-green-600" : pe?.changeinOpenInterest < 0 ? "text-red-500" : "text-gray-500"}>
+                                                    {fmt(pe?.changeinOpenInterest)}
                                                 </span>
                                             </td>
-                                            <td classname={`px-2 py-1.5 text-left relative ${isitm_pe ? "bg-red-50" : ""}`}>
-                                                <div classname="absolute inset-y-0 left-0 bg-red-200 opacity-30 rounded-r"
-                                                    style={{ width: `${peoipct}%` }} />
-                                                <span classname="relative font-medium text-gray-700">{fmt(pe?.openinterest)}</span>
+                                            <td className={`px-2 py-1.5 text-left relative ${isITM_PE ? "bg-red-50" : ""}`}>
+                                                <div className="absolute inset-y-0 left-0 bg-red-200 opacity-30 rounded-r"
+                                                    style={{ width: `${peOIPct}%` }} />
+                                                <span className="relative font-medium text-gray-700">{fmt(pe?.openInterest)}</span>
                                             </td>
                                         </tr>
                                     );
@@ -1338,41 +1338,41 @@ function optionchain({ onclose }) {
                             </tbody>
 
                             {error && (
-                                <div classname="flex flex-col items-center justify-center h-full gap-3">
-                                    <p classname="text-sm text-red-500">{error}</p>
-                                    <p classname="text-xs text-gray-400 max-w-md text-center">
-                                        nse blocks automated requests. this works best during market hours (9:15 am – 3:30 pm ist, mon–fri).
-                                        try refreshing or wait a few seconds.
+                                <div className="flex flex-col items-center justify-center h-full gap-3">
+                                    <p className="text-sm text-red-500">{error}</p>
+                                    <p className="text-xs text-gray-400 max-w-md text-center">
+                                        NSE blocks automated requests. This works best during market hours (9:15 AM – 3:30 PM IST, Mon–Fri).
+                                        Try refreshing or wait a few seconds.
                                     </p>
-                                    <button onclick={() => fetchdata(symbol, expiry)}
-                                        classname="px-4 py-2 rounded-md bg-blue-500 text-white text-sm hover:bg-blue-600">
-                                        🔄 try again
+                                    <button onClick={() => fetchData(symbol, expiry)}
+                                        className="px-4 py-2 rounded-md bg-blue-500 text-white text-sm hover:bg-blue-600">
+                                        🔄 Try Again
                                     </button>
                                 </div>
                             )}
 
-                            {/* footer — pcr and total oi */}
+                            {/* Footer — PCR and total OI */}
                             {(() => {
-                                const totalceoi = filteredrows.reduce((s, r) => s + (r.ce?.openinterest ?? 0), 0);
-                                const totalpeoi = filteredrows.reduce((s, r) => s + (r.pe?.openinterest ?? 0), 0);
-                                const pcr = totalceoi > 0 ? (totalpeoi / totalceoi).tofixed(2) : "-";
+                                const totalCEOI = filteredRows.reduce((s, r) => s + (r.CE?.openInterest ?? 0), 0);
+                                const totalPEOI = filteredRows.reduce((s, r) => s + (r.PE?.openInterest ?? 0), 0);
+                                const pcr = totalCEOI > 0 ? (totalPEOI / totalCEOI).toFixed(2) : "-";
                                 return (
                                     <tfoot>
-                                        <tr classname="bg-gray-100 font-semibold text-xs border-t border-gray-300">
-                                            <td colspan={2} classname="px-3 py-2 text-right text-green-700">
-                                                total ce oi: {fmt(totalceoi)}
+                                        <tr className="bg-gray-100 font-semibold text-xs border-t border-gray-300">
+                                            <td colSpan={2} className="px-3 py-2 text-right text-green-700">
+                                                Total CE OI: {fmt(totalCEOI)}
                                             </td>
-                                            <td colspan={5} />
-                                            <td classname="px-3 py-2 text-center text-gray-700">
-                                                pcr: <span classname={number(pcr) >= 1 ? "text-green-600" : "text-red-500"}>{pcr}</span>
+                                            <td colSpan={5} />
+                                            <td className="px-3 py-2 text-center text-gray-700">
+                                                PCR: <span className={Number(pcr) >= 1 ? "text-green-600" : "text-red-500"}>{pcr}</span>
                                             </td>
-                                            <td classname="px-3 py-2 text-center bg-gray-800 text-white text-xs">
-                                                pcr {pcr}
+                                            <td className="px-3 py-2 text-center bg-gray-800 text-white text-xs">
+                                                PCR {pcr}
                                             </td>
                                             <td />
-                                            <td colspan={5} />
-                                            <td colspan={2} classname="px-3 py-2 text-left text-red-700">
-                                                total pe oi: {fmt(totalpeoi)}
+                                            <td colSpan={5} />
+                                            <td colSpan={2} className="px-3 py-2 text-left text-red-700">
+                                                Total PE OI: {fmt(totalPEOI)}
                                             </td>
                                         </tr>
                                     </tfoot>
@@ -1386,221 +1386,221 @@ function optionchain({ onclose }) {
     );
 }
 
-// ── dashboard ─────────────────────────────────────────────────────────────────
+// ── Dashboard ─────────────────────────────────────────────────────────────────
 
-export default function dashboard() {
-    const [stocks, setstocks] = usestate([]);
-    const [search, setsearch] = usestate("");
-    const [selectedmarket, setselectedmarket] = usestate("nse");
-    const [loaded, setloaded] = usestate(false);
-    const [commodityopen, setcommodityopen] = usestate(false);
-    const [indicesopen, setindicesopen] = usestate(false);
-    const [visibleclocks, setvisibleclocks] = usestate([]);
-    const [allclocks, setallclocks] = usestate(reference_clocks); // tracks full list from db
-    const [layout, setlayout] = usestate("masonry");
-    const columns = useresponsivecolumns(4);
-    const updatetimers = useref({});
-    const [showcompare, setshowcompare] = usestate(false);
-    const [showoptions, setshowoptions] = usestate(false);
+export default function Dashboard() {
+    const [stocks, setStocks] = useState([]);
+    const [search, setSearch] = useState("");
+    const [selectedMarket, setSelectedMarket] = useState("NSE");
+    const [loaded, setLoaded] = useState(false);
+    const [commodityOpen, setCommodityOpen] = useState(false);
+    const [indicesOpen, setIndicesOpen] = useState(false);
+    const [visibleClocks, setVisibleClocks] = useState([]);
+    const [allClocks, setAllClocks] = useState(REFERENCE_CLOCKS); // tracks full list from DB
+    const [layout, setLayout] = useState("masonry");
+    const columns = useResponsiveColumns(4);
+    const updateTimers = useRef({});
+    const [showCompare, setShowCompare] = useState(false);
+    const [showOptions, setShowOptions] = useState(false);
 
-    // ── drag state ────────────────────────────────────────────────────────────
-    const dragidx = useref(null);       // index being dragged
-    const dragoveridx = useref(null);   // index being hovered over
-    const [draggingidx, setdraggingidx] = usestate(null);
-    const [droptargetidx, setdroptargetidx] = usestate(null);
+    // ── Drag state ────────────────────────────────────────────────────────────
+    const dragIdx = useRef(null);       // index being dragged
+    const dragOverIdx = useRef(null);   // index being hovered over
+    const [draggingIdx, setDraggingIdx] = useState(null);
+    const [dropTargetIdx, setDropTargetIdx] = useState(null);
 
-    // ── load watchlist ────────────────────────────────────────────────────────
-    useeffect(() => {
+    // ── Load watchlist ────────────────────────────────────────────────────────
+    useEffect(() => {
         fetch("/api/watchlist")
             .then(r => r.json())
-            .then(data => { setstocks(array.isarray(data) ? data : []); setloaded(true); })
-            .catch(() => setloaded(true));
+            .then(data => { setStocks(Array.isArray(data) ? data : []); setLoaded(true); })
+            .catch(() => setLoaded(true));
     }, []);
 
-    // ── load clocks ───────────────────────────────────────────────────────────
-    useeffect(() => {
+    // ── Load clocks ───────────────────────────────────────────────────────────
+    useEffect(() => {
         fetch("/api/clocks")
             .then(r => r.json())
             .then(data => {
-                if (array.isarray(data)) {
+                if (Array.isArray(data)) {
                     // visible clocks = only those with visible: true
-                    setvisibleclocks(data.filter(c => c.visible).map(c => c.label));
-                    // allclocks = full list for the selector total count
-                    setallclocks(data.map(c => ({
-                        ...reference_clocks.find(r => r.label === c.label),
+                    setVisibleClocks(data.filter(c => c.visible).map(c => c.label));
+                    // allClocks = full list for the selector total count
+                    setAllClocks(data.map(c => ({
+                        ...REFERENCE_CLOCKS.find(r => r.label === c.label),
                         label: c.label,
                         visible: c.visible,
-                    })).filter(boolean));
+                    })).filter(Boolean));
                 }
             })
             .catch(() => { });
     }, []);
 
-    const toggleclock = async (label) => {
-        const isvisible = visibleclocks.includes(label);
-        setvisibleclocks(prev => isvisible ? prev.filter(l => l !== label) : [...prev, label]);
+    const toggleClock = async (label) => {
+        const isVisible = visibleClocks.includes(label);
+        setVisibleClocks(prev => isVisible ? prev.filter(l => l !== label) : [...prev, label]);
         await fetch("/api/clocks", {
-            method: "put",
-            headers: { "content-type": "application/json" },
-            body: json.stringify({ label, visible: !isvisible }),
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ label, visible: !isVisible }),
         });
     };
 
-    // ── add stock ─────────────────────────────────────────────────────────────
-    const addstock = async (overridesymbol, overridemarket) => {
-        const sym = typeof overridesymbol === "string" ? overridesymbol : search;
-        const mkt = overridemarket ?? selectedmarket;
+    // ── Add stock ─────────────────────────────────────────────────────────────
+    const addStock = async (overrideSymbol, overrideMarket) => {
+        const sym = typeof overrideSymbol === "string" ? overrideSymbol : search;
+        const mkt = overrideMarket ?? selectedMarket;
         if (!sym) return;
-        const newstock = {
-            symbol: overridesymbol ? sym : sym.touppercase(),
-            market: mkt, target: 0, stoploss: 0,
-            entrydate: "", notes: "", qty: 1, buyprice: 0,
-            side: "buy", mode: (mkt === "commodity" || mkt === "index") ? "watch" : "trade",
+        const newStock = {
+            symbol: overrideSymbol ? sym : sym.toUpperCase(),
+            market: mkt, target: 0, stopLoss: 0,
+            entryDate: "", notes: "", qty: 1, buyPrice: 0,
+            side: "buy", mode: (mkt === "COMMODITY" || mkt === "INDEX") ? "watch" : "trade",
         };
         const res = await fetch("/api/watchlist", {
-            method: "post",
-            headers: { "content-type": "application/json" },
-            body: json.stringify(newstock),
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(newStock),
         });
         const saved = await res.json();
-        setstocks(prev => [...prev, saved]);
-        setsearch("");
-        setcommodityopen(false);
-        setindicesopen(false);
+        setStocks(prev => [...prev, saved]);
+        setSearch("");
+        setCommodityOpen(false);
+        setIndicesOpen(false);
     };
 
-    // ── update field ──────────────────────────────────────────────────────────
+    // ── Update field ──────────────────────────────────────────────────────────
     const update = (idx, field, value) => {
-        setstocks(prev => {
+        setStocks(prev => {
             const copy = [...prev];
-            copy[idx] = { ...copy[idx], [field]: ["target", "stoploss", "qty", "buyprice"].includes(field) ? number(value) : value };
+            copy[idx] = { ...copy[idx], [field]: ["target", "stopLoss", "qty", "buyPrice"].includes(field) ? Number(value) : value };
             return copy;
         });
-        cleartimeout(updatetimers.current[idx]);
-        updatetimers.current[idx] = settimeout(() => {
-            setstocks(prev => {
+        clearTimeout(updateTimers.current[idx]);
+        updateTimers.current[idx] = setTimeout(() => {
+            setStocks(prev => {
                 const stock = prev[idx];
                 if (!stock?.id) return prev;
                 fetch(`/api/watchlist/${stock.id}`, {
-                    method: "put",
-                    headers: { "content-type": "application/json" },
-                    body: json.stringify(stock),
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(stock),
                 }).catch(console.error);
                 return prev;
             });
         }, 600);
     };
 
-    // ── remove stock ──────────────────────────────────────────────────────────
-    const removestock = async (idx) => {
+    // ── Remove stock ──────────────────────────────────────────────────────────
+    const removeStock = async (idx) => {
         const stock = stocks[idx];
-        setstocks(prev => prev.filter((_, i) => i !== idx));
-        if (stock?.id) await fetch(`/api/watchlist/${stock.id}`, { method: "delete" });
+        setStocks(prev => prev.filter((_, i) => i !== idx));
+        if (stock?.id) await fetch(`/api/watchlist/${stock.id}`, { method: "DELETE" });
     };
 
-    // ── drag handlers ─────────────────────────────────────────────────────────
-    const handledragstart = (e, idx) => {
-        dragidx.current = idx;
-        setdraggingidx(idx);
-        e.datatransfer.effectallowed = "move";
+    // ── Drag handlers ─────────────────────────────────────────────────────────
+    const handleDragStart = (e, idx) => {
+        dragIdx.current = idx;
+        setDraggingIdx(idx);
+        e.dataTransfer.effectAllowed = "move";
     };
 
-    const handledragover = (e, idx) => {
-        e.preventdefault();
-        e.datatransfer.dropeffect = "move";
-        if (dragoveridx.current !== idx) {
-            dragoveridx.current = idx;
-            setdroptargetidx(idx);
+    const handleDragOver = (e, idx) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = "move";
+        if (dragOverIdx.current !== idx) {
+            dragOverIdx.current = idx;
+            setDropTargetIdx(idx);
         }
     };
 
-    const handledrop = (e, idx) => {
-        e.preventdefault();
-        const from = dragidx.current;
+    const handleDrop = (e, idx) => {
+        e.preventDefault();
+        const from = dragIdx.current;
         if (from === null || from === idx) return;
-        setstocks(prev => {
+        setStocks(prev => {
             const copy = [...prev];
             const [moved] = copy.splice(from, 1);
             copy.splice(idx, 0, moved);
             return copy;
         });
-        dragidx.current = null;
-        dragoveridx.current = null;
-        setdraggingidx(null);
-        setdroptargetidx(null);
+        dragIdx.current = null;
+        dragOverIdx.current = null;
+        setDraggingIdx(null);
+        setDropTargetIdx(null);
     };
 
-    const handledragend = () => {
-        dragidx.current = null;
-        dragoveridx.current = null;
-        setdraggingidx(null);
-        setdroptargetidx(null);
+    const handleDragEnd = () => {
+        dragIdx.current = null;
+        dragOverIdx.current = null;
+        setDraggingIdx(null);
+        setDropTargetIdx(null);
     };
 
     if (!loaded) return (
-        <div classname="flex items-center justify-center h-40 text-sm text-gray-400">
-            loading watchlist...
+        <div className="flex items-center justify-center h-40 text-sm text-gray-400">
+            Loading watchlist...
         </div>
     );
 
     return (
-        <div classname="w-full px-3 sm:px-4 md:px-6 py-4 md:py-6">
+        <div className="w-full px-3 sm:px-4 md:px-6 py-4 md:py-6">
 
-            {/* search + market selector — single row, search shrinks dynamically */}
-            <div classname="mb-4 flex items-center gap-2 flex-nowrap overflow-x-auto pb-1">
+            {/* Search + market selector — single row, search shrinks dynamically */}
+            <div className="mb-4 flex items-center gap-2 flex-nowrap overflow-x-auto pb-1">
 
                 <select
-                    value={selectedmarket}
-                    onchange={(e) => setselectedmarket(e.target.value)}
-                    classname="flex-shrink-0 rounded-md border border-gray-300 px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    value={selectedMarket}
+                    onChange={(e) => setSelectedMarket(e.target.value)}
+                    className="flex-shrink-0 rounded-md border border-gray-300 px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
-                    {object.entries(markets)
-                        .filter(([k]) => k !== "commodity" && k !== "index")
+                    {Object.entries(MARKETS)
+                        .filter(([k]) => k !== "COMMODITY" && k !== "INDEX")
                         .map(([key, m]) => (
                             <option key={key} value={key}>{m.label}</option>
                         ))}
                 </select>
 
-                <div classname="flex-shrink-0">
-                    <marketbadge clock={clockformarket(selectedmarket)} />
+                <div className="flex-shrink-0">
+                    <MarketBadge clock={clockForMarket(selectedMarket)} />
                 </div>
 
-                <div classname="flex-shrink-0">
-                    <clockselector visible={visibleclocks} ontoggle={toggleclock} total={allclocks.length} />
+                <div className="flex-shrink-0">
+                    <ClockSelector visible={visibleClocks} onToggle={toggleClock} total={allClocks.length} />
                 </div>
 
                 <input
                     value={search}
-                    onchange={(e) => setsearch(e.target.value)}
-                    placeholder={`search ${markets[selectedmarket].label} e.g. ${selectedmarket === "nse" ? "tcs" : selectedmarket === "tse" ? "7203" : "aapl"}`}
-                    onkeydown={(e) => e.key === "enter" && addstock()}
-                    classname="flex-1 min-w-0 rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder={`Search ${MARKETS[selectedMarket].label} e.g. ${selectedMarket === "NSE" ? "TCS" : selectedMarket === "TSE" ? "7203" : "AAPL"}`}
+                    onKeyDown={(e) => e.key === "Enter" && addStock()}
+                    className="flex-1 min-w-0 rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
 
                 <button
-                    onclick={() => addstock()}
-                    classname="flex-shrink-0 whitespace-nowrap rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                    onClick={() => addStock()}
+                    className="flex-shrink-0 whitespace-nowrap rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
                 >
-                    add
+                    Add
                 </button>
 
-                {/* commodities dropdown */}
-                <div classname="relative flex-shrink-0">
+                {/* Commodities dropdown */}
+                <div className="relative flex-shrink-0">
                     <button
-                        onclick={() => { setcommodityopen(v => !v); setindicesopen(false); setshowcompare(false); }}
-                        classname="whitespace-nowrap rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-700 hover:bg-amber-100 flex items-center gap-1"
+                        onClick={() => { setCommodityOpen(v => !v); setIndicesOpen(false); setShowCompare(false); }}
+                        className="whitespace-nowrap rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-700 hover:bg-amber-100 flex items-center gap-1"
                     >
-                        commodities <span classname="text-[10px]">{commodityopen ? "▲" : "▼"}</span>
+                        Commodities <span className="text-[10px]">{commodityOpen ? "▲" : "▼"}</span>
                     </button>
-                    {commodityopen && (
+                    {commodityOpen && (
                         <>
-                            <div classname="fixed inset-0 z-10" onclick={() => setcommodityopen(false)} />
-                            <div classname="absolute top-full left-0 z-20 mt-1 w-48 rounded-md border border-gray-200 bg-white shadow-lg py-1">
-                                {commodity_presets.map((c) => (
+                            <div className="fixed inset-0 z-10" onClick={() => setCommodityOpen(false)} />
+                            <div className="absolute top-full left-0 z-20 mt-1 w-48 rounded-md border border-gray-200 bg-white shadow-lg py-1">
+                                {COMMODITY_PRESETS.map((c) => (
                                     <button
                                         key={c.value}
-                                        onclick={() => { addstock(c.value, "commodity"); setcommodityopen(false); }}
-                                        classname="w-full text-left px-3 py-1.5 text-sm text-gray-700 hover:bg-amber-50 hover:text-amber-700"
+                                        onClick={() => { addStock(c.value, "COMMODITY"); setCommodityOpen(false); }}
+                                        className="w-full text-left px-3 py-1.5 text-sm text-gray-700 hover:bg-amber-50 hover:text-amber-700"
                                     >
                                         {c.label}
                                     </button>
@@ -1610,30 +1610,30 @@ export default function dashboard() {
                     )}
                 </div>
 
-                {/* indices dropdown */}
-                <div classname="relative flex-shrink-0">
+                {/* Indices dropdown */}
+                <div className="relative flex-shrink-0">
                     <button
-                        onclick={() => { setindicesopen(v => !v); setcommodityopen(false); setshowcompare(false); }}
-                        classname="whitespace-nowrap rounded-md border border-blue-300 bg-blue-50 px-3 py-2 text-sm font-medium text-blue-700 hover:bg-blue-100 flex items-center gap-1"
+                        onClick={() => { setIndicesOpen(v => !v); setCommodityOpen(false); setShowCompare(false); }}
+                        className="whitespace-nowrap rounded-md border border-blue-300 bg-blue-50 px-3 py-2 text-sm font-medium text-blue-700 hover:bg-blue-100 flex items-center gap-1"
                     >
-                        indices <span classname="text-[10px]">{indicesopen ? "▲" : "▼"}</span>
+                        Indices <span className="text-[10px]">{indicesOpen ? "▲" : "▼"}</span>
                     </button>
-                    {indicesopen && (
+                    {indicesOpen && (
                         <>
-                            <div classname="fixed inset-0 z-10" onclick={() => setindicesopen(false)} />
-                            <div classname="absolute top-full left-0 z-20 mt-1 w-52 rounded-md border border-gray-200 bg-white shadow-lg py-1 max-h-80 overflow-y-auto">
-                                {index_groups.map((group) => (
+                            <div className="fixed inset-0 z-10" onClick={() => setIndicesOpen(false)} />
+                            <div className="absolute top-full left-0 z-20 mt-1 w-52 rounded-md border border-gray-200 bg-white shadow-lg py-1 max-h-80 overflow-y-auto">
+                                {INDEX_GROUPS.map((group) => (
                                     <div key={group.label}>
-                                        <p classname="px-3 pt-2 pb-1 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
+                                        <p className="px-3 pt-2 pb-1 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
                                             {group.label}
                                         </p>
-                                        {index_presets
+                                        {INDEX_PRESETS
                                             .filter(i => group.values.includes(i.value))
                                             .map((idx) => (
                                                 <button
                                                     key={idx.value}
-                                                    onclick={() => { addstock(idx.value, idx.market); setindicesopen(false); }}
-                                                    classname="w-full text-left px-3 py-1.5 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700"
+                                                    onClick={() => { addStock(idx.value, idx.market); setIndicesOpen(false); }}
+                                                    className="w-full text-left px-3 py-1.5 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700"
                                                 >
                                                     {idx.label}
                                                 </button>
@@ -1645,85 +1645,85 @@ export default function dashboard() {
                     )}
                 </div>
 
-                {/* compare button */}
+                {/* Compare button */}
                 <button
-                    onclick={() => setshowcompare(true)}
-                    classname="flex-shrink-0 whitespace-nowrap rounded-md border border-purple-300 bg-purple-50 px-3 py-2 text-sm font-medium text-purple-700 hover:bg-purple-100 flex items-center gap-1"
+                    onClick={() => setShowCompare(true)}
+                    className="flex-shrink-0 whitespace-nowrap rounded-md border border-purple-300 bg-purple-50 px-3 py-2 text-sm font-medium text-purple-700 hover:bg-purple-100 flex items-center gap-1"
                 >
-                    📊 compare
+                    📊 Compare
                 </button>
 
-                {/* option chain button */}
+                {/* Option Chain button */}
                 <button
-                    onclick={() => setshowoptions(true)}
-                    classname="flex-shrink-0 whitespace-nowrap rounded-md border border-green-300 bg-green-50 px-3 py-2 text-sm font-medium text-green-700 hover:bg-green-100 flex items-center gap-1"
+                    onClick={() => setShowOptions(true)}
+                    className="flex-shrink-0 whitespace-nowrap rounded-md border border-green-300 bg-green-50 px-3 py-2 text-sm font-medium text-green-700 hover:bg-green-100 flex items-center gap-1"
                 >
-                    📋 options
+                    📋 Options
                 </button>
 
             </div>
 
-            {/* compare chart modal */}
-            {showcompare && (
-                <comparechart
-                    onclose={() => setshowcompare(false)}
+            {/* Compare chart modal */}
+            {showCompare && (
+                <CompareChart
+                    onClose={() => setShowCompare(false)}
                     dark={false}
                 />
             )}
 
-            {/* option chain modal */}
-            {showoptions && (
-                <optionchain onclose={() => setshowoptions(false)} />
+            {/* Option Chain modal */}
+            {showOptions && (
+                <OptionChain onClose={() => setShowOptions(false)} />
             )}
 
-            {/* reference clocks */}
-            {visibleclocks.length > 0 && (
-                <div classname="mb-4 flex flex-wrap gap-2">
-                    {reference_clocks.filter(clock => visibleclocks.includes(clock.label)).map((clock) => (
-                        <marketbadge key={clock.label} clock={clock} />
+            {/* Reference clocks */}
+            {visibleClocks.length > 0 && (
+                <div className="mb-4 flex flex-wrap gap-2">
+                    {REFERENCE_CLOCKS.filter(clock => visibleClocks.includes(clock.label)).map((clock) => (
+                        <MarketBadge key={clock.label} clock={clock} />
                     ))}
                 </div>
             )}
 
-            {/* cards with drag and drop */}
+            {/* Cards with drag and drop */}
             {layout === "wide" ? (
-                <div classname="flex flex-wrap gap-4">
+                <div className="flex flex-wrap gap-4">
                     {stocks.map((s, idx) => (
                         <div
                             key={s.id ?? idx}
-                            classname={`w-80 transition-all duration-150 ${droptargetidx === idx && draggingidx !== idx ? "ring-2 ring-blue-400 rounded-xl" : ""}`}
+                            className={`w-80 transition-all duration-150 ${dropTargetIdx === idx && draggingIdx !== idx ? "ring-2 ring-blue-400 rounded-xl" : ""}`}
                             draggable
-                            ondragstart={(e) => handledragstart(e, idx)}
-                            ondragover={(e) => handledragover(e, idx)}
-                            ondrop={(e) => handledrop(e, idx)}
-                            ondragend={handledragend}
+                            onDragStart={(e) => handleDragStart(e, idx)}
+                            onDragOver={(e) => handleDragOver(e, idx)}
+                            onDrop={(e) => handleDrop(e, idx)}
+                            onDragEnd={handleDragEnd}
                         >
-                            <stockcard
+                            <StockCard
                                 {...s}
-                                isdragging={draggingidx === idx}
-                                onremove={() => removestock(idx)}
-                                onupdate={(field, val) => update(idx, field, val)}
+                                isDragging={draggingIdx === idx}
+                                onRemove={() => removeStock(idx)}
+                                onUpdate={(field, val) => update(idx, field, val)}
                             />
                         </div>
                     ))}
                 </div>
             ) : (
-                <div style={{ columncount: columns, columngap: "1rem" }}>
+                <div style={{ columnCount: columns, columnGap: "1rem" }}>
                     {stocks.map((s, idx) => (
                         <div
                             key={s.id ?? idx}
-                            classname={`mb-4 break-inside-avoid transition-all duration-150 ${droptargetidx === idx && draggingidx !== idx ? "ring-2 ring-blue-400 rounded-xl" : ""}`}
+                            className={`mb-4 break-inside-avoid transition-all duration-150 ${dropTargetIdx === idx && draggingIdx !== idx ? "ring-2 ring-blue-400 rounded-xl" : ""}`}
                             draggable
-                            ondragstart={(e) => handledragstart(e, idx)}
-                            ondragover={(e) => handledragover(e, idx)}
-                            ondrop={(e) => handledrop(e, idx)}
-                            ondragend={handledragend}
+                            onDragStart={(e) => handleDragStart(e, idx)}
+                            onDragOver={(e) => handleDragOver(e, idx)}
+                            onDrop={(e) => handleDrop(e, idx)}
+                            onDragEnd={handleDragEnd}
                         >
-                            <stockcard
+                            <StockCard
                                 {...s}
-                                isdragging={draggingidx === idx}
-                                onremove={() => removestock(idx)}
-                                onupdate={(field, val) => update(idx, field, val)}
+                                isDragging={draggingIdx === idx}
+                                onRemove={() => removeStock(idx)}
+                                onUpdate={(field, val) => update(idx, field, val)}
                             />
                         </div>
                     ))}
